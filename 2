@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <title>Мой план задач</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 30px;
+      background: #f6f7f9;
+      color: #333;
+    }
+    h1 { margin-bottom: 10px; }
+    .task-row { margin-bottom: 10px; }
+    input, button {
+      padding: 6px 10px;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+    }
+    button {
+      background: #4a7aff;
+      color: white;
+      border: none;
+      cursor: pointer;
+    }
+    button:hover {
+      background: #2d5dff;
+    }
+    #gantt {
+      margin-top: 40px;
+      padding: 20px;
+      background: white;
+      border-radius: 10px;
+      border: 1px solid #ddd;
+    }
+    .bar {
+      height: 20px;
+      background: #4a7aff;
+      border-radius: 4px;
+      position: relative;
+      margin-bottom: 8px;
+    }
+    .label {
+      position: absolute;
+      left: -150px;
+      width: 140px;
+      text-align: right;
+      padding-right: 10px;
+      color: #333;
+    }
+  </style>
+</head>
+<body>
+
+<h1>План задач</h1>
+
+<div>
+  <input id="taskName" placeholder="Название задачи" />
+  <input id="dateStart" type="date" />
+  <input id="dateEnd" type="date" />
+  <button onclick="addTask()">Добавить</button>
+</div>
+
+<h2>Задачи</h2>
+<div id="taskList"></div>
+
+<div id="gantt">
+  <h2>Диаграмма Ганта</h2>
+  <div id="ganttBars"></div>
+</div>
+
+<script>
+  let tasks = [];
+
+  function addTask() {
+    const name = document.getElementById("taskName").value;
+    const start = document.getElementById("dateStart").value;
+    const end = document.getElementById("dateEnd").value;
+
+    if (!name || !start || !end) {
+      alert("Заполни все поля!");
+      return;
+    }
+
+    tasks.push({ name, start, end });
+    renderTasks();
+    renderGantt();
+  }
+
+  function renderTasks() {
+    const list = document.getElementById("taskList");
+    list.innerHTML = "";
+    tasks.forEach(t => {
+      const div = document.createElement("div");
+      div.className = "task-row";
+      div.innerText = `${t.name}: ${t.start} → ${t.end}`;
+      list.appendChild(div);
+    });
+  }
+
+  function renderGantt() {
+    const container = document.getElementById("ganttBars");
+    container.innerHTML = "";
+
+    if (tasks.length === 0) return;
+
+    const minDate = new Date(Math.min(...tasks.map(t => new Date(t.start))));
+    const maxDate = new Date(Math.max(...tasks.map(t => new Date(t.end))));
+    const totalDays = (maxDate - minDate) / (1000 * 3600 * 24);
+
+    tasks.forEach(t => {
+      const start = new Date(t.start);
+      const end = new Date(t.end);
+
+      const offset = (start - minDate) / (1000 * 3600 * 24);
+      const width = (end - start) / (1000 * 3600 * 24);
+
+      const bar = document.createElement("div");
+      bar.className = "bar";
+      bar.style.marginLeft = offset * 10 + "px";
+      bar.style.width = width * 10 + "px";
+
+      const label = document.createElement("div");
+      label.className = "label";
+      label.innerText = t.name;
+
+      bar.appendChild(label);
+      container.appendChild(bar);
+    });
+  }
+</script>
+
+</body>
+</html>
