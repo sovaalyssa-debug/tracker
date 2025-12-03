@@ -1,134 +1,380 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-  <meta charset="UTF-8">
-  <title>Мой план задач</title>
+  <meta charset="utf-8" />
+  <title>Tracker — трекер задач с авто-датами</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      padding: 30px;
-      background: #f6f7f9;
-      color: #333;
+    :root{--bg:#f6f7f9;--card:#fff;--accent:#4a7aff;--muted:#777}
+    body{font-family:Inter, Arial, sans-serif;background:var(--bg);margin:0;padding:24px;color:#222}
+    h1{margin:0 0 12px;font-size:20px}
+    .top{display:flex;gap:12px;align-items:center;margin-bottom:12px}
+    .card{background:var(--card);padding:12px;border-radius:10px;border:1px solid #e6e8ee;box-shadow:0 1px 0 rgba(0,0,0,0.02)}
+    input,select,button{font:inherit}
+    .controls input[type="date"], .controls input[type="text"], .controls input[type="number"], select {
+      padding:6px;border-radius:6px;border:1px solid #d0d4da;margin-right:6px;
     }
-    h1 { margin-bottom: 10px; }
-    .task-row { margin-bottom: 10px; }
-    input, button {
-      padding: 6px 10px;
-      border-radius: 6px;
-      border: 1px solid #ccc;
-    }
-    button {
-      background: #4a7aff;
-      color: white;
-      border: none;
-      cursor: pointer;
-    }
-    button:hover {
-      background: #2d5dff;
-    }
-    #gantt {
-      margin-top: 40px;
-      padding: 20px;
-      background: white;
-      border-radius: 10px;
-      border: 1px solid #ddd;
-    }
-    .bar {
-      height: 20px;
-      background: #4a7aff;
-      border-radius: 4px;
-      position: relative;
-      margin-bottom: 8px;
-    }
-    .label {
-      position: absolute;
-      left: -150px;
-      width: 140px;
-      text-align: right;
-      padding-right: 10px;
-      color: #333;
-    }
+    button{background:var(--accent);color:#fff;padding:8px 10px;border-radius:8px;border:none;cursor:pointer}
+    button.ghost{background:transparent;color:var(--accent);border:1px solid rgba(74,122,255,0.18)}
+    table{width:100%;border-collapse:collapse;margin-top:12px}
+    th,td{padding:8px 6px;border-bottom:1px solid #efeff2;text-align:left;font-size:13px}
+    th{background:#fbfbfc;color:var(--muted);font-weight:600}
+    .small{font-size:12px;color:var(--muted)}
+    .bar {height:18px;border-radius:6px;background:linear-gradient(90deg,var(--accent),#2d5dff);display:inline-block}
+    .id-cell{width:60px}
+    .center{text-align:center}
+    .nowrap{white-space:nowrap}
+    .tools{display:flex;gap:8px;margin-left:auto;align-items:center}
+    .note{font-size:13px;color:var(--muted);margin-top:8px}
+    input[type="checkbox"]{transform:scale(1.05)}
+    .danger{background:#ff6b6b}
+    .footer{margin-top:14px;display:flex;gap:10px;align-items:center}
+    @media (max-width:900px){table{font-size:12px} th,td{padding:6px}}
   </style>
 </head>
 <body>
+  <h1>Трекер задач — авто-даты, приоритеты, ответственные</h1>
 
-<h1>План задач</h1>
+  <div class="top">
+    <div class="card controls">
+      <input id="newName" placeholder="Название задачи" type="text" />
+      <input id="newStart" type="date" />
+      <input id="newDuration" type="number" min="1" placeholder="Длит. (дн)" style="width:90px" />
+      <select id="newPriority">
+        <option value="Высокий">🔥 Высокий</option>
+        <option value="Средний" selected>🟡 Средний</option>
+        <option value="Низкий">🟢 Низкий</option>
+      </select>
+      <input id="newOwner" type="text" placeholder="Ответственный" style="width:140px" />
+      <select id="newStatus">
+        <option>Не начато</option>
+        <option>В работе</option>
+        <option>Ожидание</option>
+        <option>Готово</option>
+        <option>Заблокировано</option>
+      </select>
+      <button onclick="addTask()">Добавить</button>
+    </div>
 
-<div>
-  <input id="taskName" placeholder="Название задачи" />
-  <input id="dateStart" type="date" />
-  <input id="dateEnd" type="date" />
-  <button onclick="addTask()">Добавить</button>
-</div>
+    <div class="tools">
+      <button class="ghost" onclick="downloadCSV()">Экспорт CSV</button>
+      <button class="ghost" onclick="importCSVPrompt()">Импорт CSV</button>
+      <button onclick="clearAll()" class="danger">Очистить</button>
+    </div>
+  </div>
 
-<h2>Задачи</h2>
-<div id="taskList"></div>
+  <div class="card">
+    <div class="note">Подсказка: укажи <strong>ID предшественника</strong> (A-номер задачи) чтобы связать задачи. Включи <em>Override</em>, чтобы вручную зафиксировать дату старта и не менять её по предшественникам.</div>
 
-<div id="gantt">
-  <h2>Диаграмма Ганта</h2>
-  <div id="ganttBars"></div>
-</div>
+    <table id="tasksTable">
+      <thead>
+        <tr>
+          <th class="id-cell">ID</th>
+          <th>Задача</th>
+          <th>Дата начала</th>
+          <th>Длительность (дн)</th>
+          <th>Дата окончания</th>
+          <th>Предш.</th>
+          <th>Override</th>
+          <th>Приоритет</th>
+          <th>Ответственный</th>
+          <th>Статус</th>
+          <th class="center">Действия</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
 
-<script>
-  let tasks = [];
+    <div class="footer">
+      <div class="small">Авто-сохранение включено (LocalStorage).</div>
+      <div style="margin-left:auto" class="small">Текущая версия — <strong id="count"></strong> задач</div>
+    </div>
+  </div>
 
-  function addTask() {
-    const name = document.getElementById("taskName").value;
-    const start = document.getElementById("dateStart").value;
-    const end = document.getElementById("dateEnd").value;
+  <script>
+    // ---------- Data model ----------
+    let tasks = []; // each: {id,name,start,duration,end,prev,override,priority,owner,status}
+    const storageKey = "tracker.tasks.v1";
 
-    if (!name || !start || !end) {
-      alert("Заполни все поля!");
-      return;
+    // utils
+    function formatDate(d){ if(!d) return ""; const dt = new Date(d); const y=dt.getFullYear(); const m=(dt.getMonth()+1).toString().padStart(2,'0'); const day=dt.getDate().toString().padStart(2,'0'); return `${y}-${m}-${day}`; }
+    function parseDate(s){ if(!s) return null; const t = new Date(s + "T00:00:00"); return isNaN(t) ? null : t; }
+    function addDays(d, n){ const x = new Date(d); x.setDate(x.getDate() + n); return x; }
+
+    // load/save
+    function save(){
+      localStorage.setItem(storageKey, JSON.stringify(tasks));
+      render();
+    }
+    function load(){
+      const raw = localStorage.getItem(storageKey);
+      if(raw){
+        try{ tasks = JSON.parse(raw); }
+        catch(e){ tasks=[]; }
+      } else {
+        // sample first time
+        tasks = [
+          {id:"A1", name:"Обмер", start:formatDate(new Date()), duration:2, prev:"", override:false, priority:"Средний", owner:"", status:"Не начато"},
+          {id:"A2", name:"Планировки", start:"", duration:5, prev:"A1", override:false, priority:"Высокий", owner:"", status:"Не начато"},
+          {id:"A3", name:"Согласование №1", start:"", duration:3, prev:"A2", override:false, priority:"Средний", owner:"", status:"Не начато"},
+        ];
+        save();
+      }
     }
 
-    tasks.push({ name, start, end });
-    renderTasks();
-    renderGantt();
-  }
+    // ---------- Core: recalc chain ----------
+    function recalcAll(){
+      // compute end for tasks with start & duration
+      // propagate start from predecessors unless override = true
+      // iterative stabilization (max N iterations)
+      // ensure we work with Date objects
+      const map = {};
+      tasks.forEach(t=> map[t.id]=t);
 
-  function renderTasks() {
-    const list = document.getElementById("taskList");
-    list.innerHTML = "";
-    tasks.forEach(t => {
-      const div = document.createElement("div");
-      div.className = "task-row";
-      div.innerText = `${t.name}: ${t.start} → ${t.end}`;
-      list.appendChild(div);
-    });
-  }
+      // initialize ends for tasks with valid start+duration
+      tasks.forEach(t=>{
+        t._startDate = parseDate(t.start);
+        t._duration = Number(t.duration)||0;
+        if(t._startDate && t._duration) t.end = formatDate(addDays(t._startDate, t._duration - 1));
+        else t.end = "";
+      });
 
-  function renderGantt() {
-    const container = document.getElementById("ganttBars");
-    container.innerHTML = "";
+      // iterate updates: for safety, run up to tasks.length+2 passes
+      let changed = true;
+      let passes = 0;
+      while(changed && passes < tasks.length + 5){
+        changed = false;
+        passes++;
+        for(const t of tasks){
+          // if has predecessor and not override -> set start = pred.end + 1
+          if(t.prev && !t.override){
+            const p = map[t.prev];
+            if(p && p.end){
+              const predEnd = parseDate(p.end);
+              if(predEnd){
+                const desiredStart = formatDate(addDays(predEnd, 1));
+                if(t.start !== desiredStart){
+                  t.start = desiredStart;
+                  t._startDate = parseDate(t.start);
+                  // recompute end if duration exists
+                  if(t._startDate && t._duration){ t.end = formatDate(addDays(t._startDate, t._duration - 1)); }
+                  changed = true;
+                }
+              }
+            }
+          } else {
+            // if start set manually, compute end
+            if(t._startDate && t._duration){
+              const newEnd = formatDate(addDays(t._startDate, t._duration -1));
+              if(t.end !== newEnd){ t.end = newEnd; changed = true; }
+            }
+          }
+        }
+      }
+      // final cleanup
+      tasks.forEach(t=>{ t._startDate = parseDate(t.start); t._duration = Number(t.duration)||0; });
+    }
 
-    if (tasks.length === 0) return;
+    // ---------- UI ----------
+    function render(){
+      recalcAll();
+      const tbody = document.querySelector("#tasksTable tbody");
+      tbody.innerHTML = "";
+      for(const t of tasks){
+        const tr = document.createElement("tr");
 
-    const minDate = new Date(Math.min(...tasks.map(t => new Date(t.start))));
-    const maxDate = new Date(Math.max(...tasks.map(t => new Date(t.end))));
-    const totalDays = (maxDate - minDate) / (1000 * 3600 * 24);
+        // id
+        const tdId = document.createElement("td"); tdId.className="id-cell"; tdId.textContent = t.id;
+        tr.appendChild(tdId);
 
-    tasks.forEach(t => {
-      const start = new Date(t.start);
-      const end = new Date(t.end);
+        // name
+        const tdName = document.createElement("td");
+        const inpName = document.createElement("input"); inpName.value = t.name || ""; inpName.style.width="100%";
+        inpName.addEventListener("change", ()=> { t.name = inpName.value; save(); });
+        tdName.appendChild(inpName); tr.appendChild(tdName);
 
-      const offset = (start - minDate) / (1000 * 3600 * 24);
-      const width = (end - start) / (1000 * 3600 * 24);
+        // start
+        const tdStart = document.createElement("td");
+        const inStart = document.createElement("input"); inStart.type="date"; inStart.value = t.start || "";
+        inStart.addEventListener("change", ()=> { t.start = inStart.value; save(); });
+        tdStart.appendChild(inStart); tr.appendChild(tdStart);
 
-      const bar = document.createElement("div");
-      bar.className = "bar";
-      bar.style.marginLeft = offset * 10 + "px";
-      bar.style.width = width * 10 + "px";
+        // duration
+        const tdDur = document.createElement("td");
+        const inDur = document.createElement("input"); inDur.type="number"; inDur.min=1; inDur.style.width="80px"; inDur.value = t.duration || 1;
+        inDur.addEventListener("change", ()=> { t.duration = Number(inDur.value)||1; save(); });
+        tdDur.appendChild(inDur); tr.appendChild(tdDur);
 
-      const label = document.createElement("div");
-      label.className = "label";
-      label.innerText = t.name;
+        // end (readonly)
+        const tdEnd = document.createElement("td"); tdEnd.textContent = t.end || ""; tr.appendChild(tdEnd);
 
-      bar.appendChild(label);
-      container.appendChild(bar);
-    });
-  }
-</script>
+        // predecessor
+        const tdPrev = document.createElement("td");
+        const inPrev = document.createElement("input"); inPrev.placeholder="A1"; inPrev.style.width="70px";
+        inPrev.value = t.prev || "";
+        inPrev.addEventListener("change", ()=> { t.prev = inPrev.value.trim(); save(); });
+        tdPrev.appendChild(inPrev); tr.appendChild(tdPrev);
 
+        // override
+        const tdOV = document.createElement("td"); tdOV.className="center";
+        const chk = document.createElement("input"); chk.type="checkbox"; chk.checked = !!t.override;
+        chk.addEventListener("change", ()=> { t.override = chk.checked; save(); });
+        tdOV.appendChild(chk); tr.appendChild(tdOV);
+
+        // priority
+        const tdPr = document.createElement("td");
+        const selPr = document.createElement("select");
+        ["Высокий","Средний","Низкий"].forEach(opt=>{
+          const o = document.createElement("option"); o.value=o.textContent=opt; if(t.priority===opt) o.selected=true; selPr.appendChild(o);
+        });
+        selPr.addEventListener("change", ()=> { t.priority = selPr.value; save(); });
+        tdPr.appendChild(selPr); tr.appendChild(tdPr);
+
+        // owner
+        const tdOwner = document.createElement("td");
+        const inOwner = document.createElement("input"); inOwner.value = t.owner || ""; inOwner.style.width="110px";
+        inOwner.addEventListener("change", ()=> { t.owner = inOwner.value; save(); });
+        tdOwner.appendChild(inOwner); tr.appendChild(tdOwner);
+
+        // status
+        const tdStatus = document.createElement("td");
+        const selSt = document.createElement("select");
+        ["Не начато","В работе","Ожидание","Готово","Заблокировано"].forEach(opt=>{
+          const o = document.createElement("option"); o.value=o.textContent=opt; if(t.status===opt) o.selected=true; selSt.appendChild(o);
+        });
+        selSt.addEventListener("change", ()=> { t.status = selSt.value; save(); });
+        tdStatus.appendChild(selSt); tr.appendChild(tdStatus);
+
+        // actions
+        const tdAct = document.createElement("td"); tdAct.className="center nowrap";
+        const btnUp = document.createElement("button"); btnUp.className="ghost"; btnUp.textContent="↑"; btnUp.title="Поднять";
+        btnUp.onclick = ()=> { moveTask(t.id, -1); };
+        const btnDown = document.createElement("button"); btnDown.className="ghost"; btnDown.textContent="↓"; btnDown.title="Опустить";
+        btnDown.onclick = ()=> { moveTask(t.id, 1); };
+        const btnDel = document.createElement("button"); btnDel.textContent="Удалить"; btnDel.onclick = ()=> { if(confirm('Удалить задачу '+t.id+'?')){ removeTask(t.id); } };
+        tdAct.appendChild(btnUp); tdAct.appendChild(btnDown); tdAct.appendChild(btnDel);
+        tr.appendChild(tdAct);
+
+        tbody.appendChild(tr);
+      }
+
+      document.getElementById("count").textContent = tasks.length;
+    }
+
+    // ---------- CRUD ----------
+    function genId(){
+      // A1, A2, ...
+      const base="A";
+      let n = 1;
+      while(tasks.find(x=> x.id === base + n)) n++;
+      return base + n;
+    }
+
+    function addTask(){
+      const name = document.getElementById("newName").value.trim() || "Новая задача";
+      const start = document.getElementById("newStart").value || "";
+      const duration = Number(document.getElementById("newDuration").value) || 1;
+      const priority = document.getElementById("newPriority").value;
+      const owner = document.getElementById("newOwner").value.trim();
+      const status = document.getElementById("newStatus").value;
+      const obj = { id: genId(), name, start, duration, prev:"", override:false, priority, owner, status };
+      tasks.push(obj);
+      save();
+      // clear inputs
+      document.getElementById("newName").value=""; document.getElementById("newStart").value=""; document.getElementById("newDuration").value="";
+    }
+
+    function removeTask(id){
+      tasks = tasks.filter(t=> t.id !== id);
+      // also clear references
+      tasks.forEach(t=>{ if(t.prev === id) t.prev = ""; });
+      save();
+    }
+
+    function moveTask(id, dir){
+      const idx = tasks.findIndex(t=> t.id===id);
+      if(idx < 0) return;
+      const to = idx + dir;
+      if(to < 0 || to >= tasks.length) return;
+      const tmp = tasks[to]; tasks[to] = tasks[idx]; tasks[idx] = tmp;
+      save();
+    }
+
+    function clearAll(){
+      if(confirm("Удалить все задачи?")){ tasks=[]; save(); }
+    }
+
+    // ---------- CSV export/import ----------
+    function downloadCSV(){
+      const header = ["ID","Name","Start","Duration","End","Prev","Override","Priority","Owner","Status"];
+      const rows = tasks.map(t=> [t.id, escapeCsv(t.name), t.start||"", t.duration||"", t.end||"", t.prev||"", t.override?"1":"0", t.priority||"", t.owner||"", t.status||""]);
+      const content = [header.join(","), ...rows.map(r=> r.join(","))].join("\n");
+      const blob = new Blob([content], {type:"text/csv;charset=utf-8;"});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a"); a.href=url; a.download="tasks.csv"; a.click();
+      URL.revokeObjectURL(url);
+    }
+    function escapeCsv(s){ if(s==null) return ""; return '"'+ String(s).replace(/"/g,'""') + '"'; }
+
+    function importCSVPrompt(){
+      const input = document.createElement("input"); input.type="file"; input.accept=".csv,text/csv";
+      input.onchange = e=>{
+        const f = e.target.files[0];
+        if(!f) return;
+        const reader = new FileReader();
+        reader.onload = ev=>{
+          try{ parseCSV(ev.target.result); save(); } catch(err){ alert("Ошибка парсинга CSV: "+err); }
+        };
+        reader.readAsText(f, "utf-8");
+      };
+      input.click();
+    }
+
+    function parseCSV(text){
+      // very simple CSV parser expecting header and commas, quoted fields
+      const lines = text.split(/\r?\n/).filter(Boolean);
+      if(lines.length < 2) throw "Пустой файл";
+      const hdr = lines[0].split(",").map(h=>h.replace(/(^"|"$)/g,""));
+      const idx = hdr.reduce((m,h,i)=>{ m[h.trim()]=i; return m; }, {});
+      const newTasks = [];
+      for(let i=1;i<lines.length;i++){
+        // naive split by comma respecting quotes
+        const row = csvSplit(lines[i]);
+        const t = {
+          id: row[idx["ID"]] || ("A"+(i+1)),
+          name: row[idx["Name"]] ? row[idx["Name"]].replace(/^"|"$/g,"").replace(/""/g,'"') : "",
+          start: row[idx["Start"]] || "",
+          duration: Number(row[idx["Duration"]]||1),
+          end: row[idx["End"]] || "",
+          prev: row[idx["Prev"]] || "",
+          override: (row[idx["Override"]]||"") === "1",
+          priority: row[idx["Priority"]] || "Средний",
+          owner: row[idx["Owner"]] || "",
+          status: row[idx["Status"]] || "Не начато"
+        };
+        newTasks.push(t);
+      }
+      tasks = newTasks;
+    }
+    function csvSplit(line){
+      const out=[]; let cur=""; let q=false;
+      for(let i=0;i<line.length;i++){
+        const ch=line[i];
+        if(ch=='"' ){ if(q && line[i+1]=='"'){ cur+='"'; i++; } else q=!q; continue; }
+        if(ch==',' && !q){ out.push(cur); cur=""; continue; }
+        cur += ch;
+      }
+      out.push(cur);
+      return out;
+    }
+
+    // ---------- initial ----------
+    load();
+    render();
+
+    // expose for debugging
+    window.tasksApp = { tasks, save, load, render, downloadCSV, importCSVPrompt };
+
+  </script>
 </body>
 </html>
