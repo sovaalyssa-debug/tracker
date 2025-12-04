@@ -3,25 +3,25 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Tracker — Гант (мягкие зависимости)</title>
+<title>Project Tracker — Гант с учётом выходных и согласований</title>
 <style>
   :root{
-    --bg:#f6f8fb; --card:#fff; --accent:#4666ff; --muted:#6b6f76;
-    --ok:#2db47e; --danger:#ff6b6b; --shadow: 0 8px 24px rgba(20,30,70,0.06);
-    --prio-high:#ffdddd; --prio-mid:#fff6e6; --prio-low:#eefaf0;
+    --bg:#f6f8fb; --card:#fff; --muted:#6d7280; --accent:#3f6ef8;
+    --ok:#2db47e; --danger:#ff6b6b; --shadow:0 8px 24px rgba(30,40,80,0.06);
   }
   *{box-sizing:border-box}
-  body{background:var(--bg);font-family:Inter, Roboto, Arial, sans-serif;color:#222;margin:0;padding:28px;display:flex;justify-content:center}
-  .wrap{width:100%;max-width:1180px}
+  body{margin:0;padding:28px;background:var(--bg);font-family:Inter, Arial, sans-serif;color:#222;display:flex;justify-content:center}
+  .wrap{width:100%;max-width:1200px}
   header{display:flex;gap:12px;align-items:center;margin-bottom:14px}
-  #projectTitle{flex:1;padding:10px;border-radius:10px;border:1px solid #e8eefb;font-size:18px}
+  #projectTitle{flex:1;padding:10px;border-radius:10px;border:1px solid #e8eefb;background:white;font-size:18px}
+  .top{display:flex;gap:8px;align-items:center;margin-bottom:12px}
   .card{background:var(--card);border-radius:12px;padding:12px;border:1px solid #eef2fb;box-shadow:var(--shadow);margin-bottom:14px}
-  .controls{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  .controls{display:flex;gap:8px;flex-wrap:wrap}
   input[type="text"], input[type="date"], input[type="number"], select{
     padding:8px;border-radius:8px;border:1px solid #e6ebf8;background:white;font-size:14px;
   }
-  button{background:var(--accent);color:#fff;border:none;padding:8px 10px;border-radius:8px;cursor:pointer}
-  button.ghost{background:transparent;color:var(--accent);border:1px solid rgba(70,102,255,0.12)}
+  button{background:var(--accent);color:#fff;border:none;padding:9px 12px;border-radius:8px;cursor:pointer;font-weight:600}
+  button.ghost{background:transparent;color:var(--accent);border:1px solid rgba(63,110,248,0.12)}
   .grid{display:grid;grid-template-columns:1fr 420px;gap:12px}
   @media (max-width:1000px){ .grid{grid-template-columns:1fr} }
 
@@ -30,13 +30,10 @@
   th{background:#fbfcff;color:var(--muted);font-weight:700;text-align:left}
   .id{width:62px;font-weight:700;color:#334}
   .center{text-align:center}
-  .nowrap{white-space:nowrap}
   .small{font-size:13px;color:var(--muted)}
-  .prio-chip{display:inline-flex;gap:8px;align-items:center;padding:6px 8px;border-radius:999px;font-weight:700}
-  .prio-high{background:var(--prio-high);color:#c0392b}
-  .prio-mid{background:var(--prio-mid);color:#b36b00}
-  .prio-low{background:var(--prio-low);color:#0a7a4a}
-
+  .prio-high{background:#fff0f0;color:#c0392b;padding:6px;border-radius:8px}
+  .prio-mid{background:#fff9f0;color:#b36b00;padding:6px;border-radius:8px}
+  .prio-low{background:#f0fff5;color:#0a7a4a;padding:6px;border-radius:8px}
   .gantt-wrap{overflow:auto;padding:8px}
   .gantt-canvas{background:white;border-radius:10px;border:1px solid #eef2fb;padding:10px}
   .legend{display:flex;gap:8px;align-items:center;margin-top:8px}
@@ -44,6 +41,7 @@
   .bar-rect{width:18px;height:10px;border-radius:4px;display:inline-block}
   .actions{display:flex;gap:8px;align-items:center}
   .muted{color:var(--muted)}
+  input[disabled], select[disabled]{background:#f6f8fb;color:#999}
 </style>
 </head>
 <body>
@@ -58,11 +56,18 @@
     </header>
 
     <div class="card controls">
-      <input id="taskName" type="text" placeholder="Название задачи (обязательно)" style="min-width:180px"/>
+      <input id="taskName" type="text" placeholder="Название задачи" style="min-width:160px"/>
       <input id="taskStart" type="date" />
       <input id="taskEnd" type="date" />
-      <input id="taskDuration" type="number" min="1" placeholder="Длит. дн." style="width:90px"/>
+      <input id="taskDuration" type="number" min="1" placeholder="Длит. (дн)" style="width:90px"/>
       <input id="taskDepends" type="text" placeholder="Depends (ID или имя)" style="width:140px"/>
+      <select id="taskApproval">
+        <option value="Не требуется">Не требуется</option>
+        <option value="Согласование">Согласование</option>
+        <option value="Согласовано">Согласовано</option>
+        <option value="На доработку">На доработку</option>
+      </select>
+      <input id="taskCorrection" type="number" style="width:90px" placeholder="Коррекция дн" />
       <select id="taskPriority">
         <option value="Высокий">🔥 Высокий</option>
         <option value="Средний" selected>⚠️ Средний</option>
@@ -84,9 +89,11 @@
               <th>Задача</th>
               <th>Start</th>
               <th>End</th>
-              <th>Длит. (дн)</th>
+              <th>Длит. (раб. дн)</th>
               <th>Depends</th>
               <th>Override</th>
+              <th>Approval</th>
+              <th>Коррекция</th>
               <th>Приоритет</th>
               <th>Ответственный</th>
               <th>Статус</th>
@@ -95,7 +102,7 @@
           </thead>
           <tbody></tbody>
         </table>
-        <div style="margin-top:8px" class="small muted">Soft-dependencies: если зависимость задана и Override выключен — Start зависимости автоматически становится равен End предшественника. При ручной правке Start/End Override включается автоматически.</div>
+        <div style="margin-top:8px" class="small muted">При статусе «Согласование» редактирование дат запрещено (ждём решения). При «На доработку» доступна Коррекция (± дн) — затем все зависимые смещаются автоматически. Длительность считается в рабочих днях (Пн–Пт).</div>
       </div>
 
       <div>
@@ -107,7 +114,7 @@
 
           <div class="gantt-wrap" style="margin-top:10px">
             <div class="gantt-canvas">
-              <canvas id="ganttCanvas" width="820" height="420" style="width:100%;height:420px;display:block"></canvas>
+              <canvas id="ganttCanvas" width="820" height="460" style="width:100%;height:460px;display:block"></canvas>
             </div>
             <div class="legend">
               <div class="item"><span class="bar-rect" style="background:#4666ff"></span> Активная</div>
@@ -118,24 +125,22 @@
         </div>
 
         <div style="height:12px"></div>
-        <div class="card small muted">ID генерируются автоматически (A1, A2…). Для корректной работы зависимостей удобнее указывать ID.</div>
+        <div class="card small muted">ID генерируются (A1, A2…). Для корректных связей удобно указывать ID.</div>
       </div>
     </div>
   </div>
 
 <script>
 /* =========================
-   Date helpers (timezone-safe)
-   We treat dates as yyyy-mm-dd strings and do arithmetic in UTC midnight.
+   Date helpers (timezone-safe UTC)
+   treat strings "YYYY-MM-DD"
    ========================= */
 function parseYMD(s){
-  // returns Date (UTC midnight) or null
   if(!s) return null;
-  // expect exactly YYYY-MM-DD
   const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s);
   if(!m) return null;
-  const y = Number(m[1]), mo = Number(m[2]), d = Number(m[3]);
-  return new Date(Date.UTC(y, mo-1, d));
+  const y = Number(m[1]), mo = Number(m[2]) - 1, d = Number(m[3]);
+  return new Date(Date.UTC(y, mo, d));
 }
 function fmtYMD(dt){
   if(!dt) return "";
@@ -144,24 +149,49 @@ function fmtYMD(dt){
   const d = String(dt.getUTCDate()).padStart(2,"0");
   return `${y}-${m}-${d}`;
 }
-function addDaysUTC(dt, n){
-  const copy = new Date(dt.getTime());
-  copy.setUTCDate(copy.getUTCDate() + n);
-  return copy;
+function isWeekend(dt){
+  const w = dt.getUTCDay();
+  return w === 0 || w === 6; // Sun=0, Sat=6
 }
-function daysBetweenUTC(a,b){
-  // a,b Dates (UTC)
-  const diff = Math.round((b.getTime() - a.getTime()) / (24*3600*1000));
-  return diff;
+function addDaysUTC(dt, n){
+  const x = new Date(dt.getTime());
+  x.setUTCDate(x.getUTCDate() + n);
+  return x;
+}
+function addBusinessDays(dt, n){
+  // n can be negative
+  let cur = new Date(dt.getTime());
+  const step = n >= 0 ? 1 : -1;
+  let left = Math.abs(n);
+  while(left > 0){
+    cur = addDaysUTC(cur, step);
+    if(!isWeekend(cur)) left--;
+  }
+  return cur;
+}
+function businessDaysBetweenInclusive(a,b){
+  // returns count of business days from a to b inclusive
+  if(!a || !b) return 0;
+  const start = new Date(Date.UTC(a.getUTCFullYear(), a.getUTCMonth(), a.getUTCDate()));
+  const end = new Date(Date.UTC(b.getUTCFullYear(), b.getUTCMonth(), b.getUTCDate()));
+  if(end < start) return 0;
+  let count = 0;
+  let cur = new Date(start.getTime());
+  while(cur <= end){
+    if(!isWeekend(cur)) count++;
+    cur = addDaysUTC(cur, 1);
+  }
+  return count;
 }
 
 /* =========================
-   Data model + storage
+   Data model & storage
    ========================= */
-const STORAGE_KEY = "tracker.softdeps.v1";
-let tasks = []; // {id,name,start,end,duration,depends,override,priority,owner,status}
+const STORAGE_KEY = "tracker.advanced.v1";
+let tasks = []; // objects: {id,name,start,end,duration,depends,override,approval,correction,priority,owner,status}
 const DEFAULT_DAYS = 3;
 
+/* load/save */
 function load(){
   const raw = localStorage.getItem(STORAGE_KEY);
   if(raw){
@@ -169,12 +199,12 @@ function load(){
     catch(e){ tasks = []; }
   }
   if(!tasks || tasks.length === 0){
-    // initial sample
-    const today = fmtYMD(new Date(Date.now()));
+    // sample data
+    const t0 = fmtYMD(new Date(Date.now()));
     tasks = [
-      {id:"A1", name:"Обмер", start: today, end: fmtYMD(addDaysUTC(parseYMD(today), 2)), duration:3, depends:"", override:false, priority:"Высокий", owner:"Алиса", status:"В работе"},
-      {id:"A2", name:"Планировки", start:"", end:"", duration:5, depends:"A1", override:false, priority:"Средний", owner:"Саша", status:"Не начато"},
-      {id:"A3", name:"Чертежи", start:"", end:"", duration:4, depends:"A2", override:false, priority:"Низкий", owner:"Оля", status:"Не начато"}
+      {id:"A1", name:"Обмер", start:t0, end:fmtYMD(addBusinessDays(parseYMD(t0), 2)), duration:3, depends:"", override:false, approval:"Не требуется", correction:0, priority:"Средний", owner:"Алиса", status:"В работе"},
+      {id:"A2", name:"Планировки", start:"", end:"", duration:5, depends:"A1", override:false, approval:"Не требуется", correction:0, priority:"Высокий", owner:"Саша", status:"Не начато"},
+      {id:"A3", name:"Согласование №1", start:"", end:"", duration:3, depends:"A2", override:false, approval:"Согласование", correction:0, priority:"Средний", owner:"Оля", status:"Не начато"}
     ];
     save();
   }
@@ -185,24 +215,15 @@ function save(){
 }
 
 /* =========================
-   Dependency resolution (soft)
-   - If task.depends references predecessor (by id or exact name) and override==false:
-       start(task) := end(pred)  (same day)
-       end(task) := start + duration - 1   (unless user manually set a different end previously)
-   - If start set but no end -> end = start + duration -1
-   - If user manually edits start or end -> override = true for that task
-   Implementation:
-     - iterative passes until stable (max passes)
-     - we preserve duration per task (tasks[i].duration)
+   Dependency & approval logic
    ========================= */
-function resolveDependencies(){
+function resolveAll(){
+  // build lookup by id and name
   const lookup = {};
   tasks.forEach(t => { lookup[t.id] = t; lookup[t.name] = t; });
 
-  // ensure duration numbers
-  tasks.forEach(t => {
-    t.duration = Number(t.duration) || DEFAULT_DAYS;
-  });
+  // normalize duration numbers
+  tasks.forEach(t => { t.duration = Math.max(1, Number(t.duration) || DEFAULT_DAYS); t.correction = Number(t.correction) || 0; });
 
   let changed = true;
   let passes = 0;
@@ -211,105 +232,121 @@ function resolveDependencies(){
   while(changed && passes < maxPasses){
     changed = false;
     passes++;
-    for(const t of tasks){
-      // compute startDate and endDate as Date objects
-      let s = parseYMD(t.start);
-      let e = parseYMD(t.end);
 
-      // if depends & predecessor exists & not override
+    for(const t of tasks){
+      // skip if approval == "Согласование": locked — we DO NOT change its start/end automatically while waiting
+      if(t.approval === "Согласование") {
+        // But still ensure duration matches start/end if both exist
+        if(t.start && t.end){
+          const s = parseYMD(t.start), e = parseYMD(t.end);
+          const dur = businessDaysBetweenInclusive(s,e);
+          if(t.duration !== dur){ t.duration = dur; changed = true; }
+        }
+        continue;
+      }
+
+      // If depends exists and predecessor present and override false => start = pred.end (same day)
       if(t.depends && !t.override){
         const pred = lookup[t.depends];
         if(pred && pred.end){
           const predEnd = parseYMD(pred.end);
           if(predEnd){
-            const desiredStart = fmtYMD(predEnd); // exactly same day as pred.end
+            const desiredStart = fmtYMD(predEnd); // same day as pred end
             if(t.start !== desiredStart){
               t.start = desiredStart;
-              s = parseYMD(t.start);
               changed = true;
             }
-            // set end based on duration unless user set a custom end that is later than computed
-            const desiredEnd = fmtYMD(addDaysUTC(s, t.duration - 1));
-            if(!t.end || parseYMD(t.end) < s || t._lastAutoEnd === t.end){
-              if(t.end !== desiredEnd){
-                t.end = desiredEnd;
-                changed = true;
-              }
+            // compute desired end based on duration (and correction if approval == 'На доработку')
+            const baseEnd = addBusinessDays(parseYMD(t.start), t.duration - 1);
+            let desiredEnd = baseEnd;
+            if(t.approval === "На доработку"){
+              // apply correction (could be negative)
+              desiredEnd = addBusinessDays(desiredEnd, t.correction);
             }
-            t._lastAutoEnd = t.end;
-            continue; // handled
+            const desiredEndStr = fmtYMD(desiredEnd);
+            if(t.end !== desiredEndStr){
+              t.end = desiredEndStr;
+              changed = true;
+            }
+            // update duration to actual (variant C): duration = businessDaysBetweenInclusive(start,end)
+            const newDur = businessDaysBetweenInclusive(parseYMD(t.start), parseYMD(t.end));
+            if(t.duration !== newDur){
+              t.duration = newDur;
+              // don't mark changed for duration-only change to avoid loops; but it's OK to mark
+            }
           }
         }
-      }
-
-      // if no depends or override: if start exists and no valid end -> set end based on duration
-      if(t.start){
-        s = parseYMD(t.start);
-        if(!s) continue;
-        const desiredEnd = fmtYMD(addDaysUTC(s, t.duration - 1));
-        if(!t.end || parseYMD(t.end) < s || t._lastAutoEnd === t.end){
-          if(t.end !== desiredEnd){
-            t.end = desiredEnd;
-            changed = true;
-          }
-        }
-        t._lastAutoEnd = t.end;
       } else {
-        // no start: if end exists and no start -> try to derive start based on duration
-        if(t.end){
-          e = parseYMD(t.end);
+        // No depends or override true: if start exists -> ensure end matches duration, apply correction if status "На доработку"
+        if(t.start){
+          const s = parseYMD(t.start);
+          if(s){
+            let desiredEnd = addBusinessDays(s, t.duration - 1);
+            if(t.approval === "На доработку"){
+              desiredEnd = addBusinessDays(desiredEnd, t.correction);
+            }
+            const desiredEndStr = fmtYMD(desiredEnd);
+            if(t.end !== desiredEndStr){
+              t.end = desiredEndStr;
+              changed = true;
+            }
+            // align duration to actual difference (C)
+            const newDur = businessDaysBetweenInclusive(parseYMD(t.start), parseYMD(t.end));
+            if(t.duration !== newDur){
+              t.duration = newDur;
+            }
+          }
+        } else if(t.end){
+          // end exists but no start -> derive start from duration
+          const e = parseYMD(t.end);
           if(e){
-            const desiredStart = fmtYMD(addDaysUTC(e, - (t.duration - 1)));
+            const desiredStart = fmtYMD(addBusinessDays(e, - (t.duration - 1)));
             if(t.start !== desiredStart){
               t.start = desiredStart;
               changed = true;
             }
-            t._lastAutoEnd = t.end;
           }
         }
       }
-    } // end for
-  } // end while
+    } // for tasks
+  } // while
 
-  // normalize strings
-  tasks.forEach(t => {
+  // final normalization
+  tasks.forEach(t=>{
     t.start = parseYMD(t.start) ? fmtYMD(parseYMD(t.start)) : "";
     t.end = parseYMD(t.end) ? fmtYMD(parseYMD(t.end)) : "";
-    t.duration = Number(t.duration) || DEFAULT_DAYS;
+    t.duration = Math.max(1, Number(t.duration) || DEFAULT_DAYS);
+    t.correction = Number(t.correction) || 0;
   });
 }
 
 /* =========================
-   UI rendering & bindings
+   UI render & bindings
    ========================= */
 function render(){
-  resolveDependencies();
+  resolveAll();
   const tbody = document.querySelector("#tasksTable tbody");
   tbody.innerHTML = "";
   for(const t of tasks){
     const tr = document.createElement("tr");
 
-    // id
+    // ID
     const tdId = document.createElement("td"); tdId.className="id"; tdId.textContent = t.id; tr.appendChild(tdId);
 
     // name
     const tdName = document.createElement("td");
-    const inName = document.createElement("input"); inName.type="text"; inName.value = t.name || "";
-    inName.onchange = () => { t.name = inName.value.trim(); save(); };
+    const inName = document.createElement("input"); inName.type="text"; inName.value = t.name;
+    inName.onchange = ()=>{ t.name = inName.value.trim(); save(); };
     tdName.appendChild(inName); tr.appendChild(tdName);
 
     // start
     const tdStart = document.createElement("td");
     const inStart = document.createElement("input"); inStart.type="date"; inStart.value = t.start || "";
-    inStart.onchange = () => {
-      // when user edits start manually -> set override = true
-      t.start = inStart.value || "";
-      t.override = true;
-      // recalc duration cache if end exists
-      if(t.start && t.end){
-        const s = parseYMD(t.start), e = parseYMD(t.end);
-        if(s && e) t.duration = Math.max(1, daysBetweenUTC(s,e) + 1);
-      }
+    // if approval==Согласование => disable editing
+    if(t.approval === "Согласование") inStart.disabled = true;
+    inStart.onchange = ()=>{ if(t.approval === "Согласование"){ alert("Нельзя менять дату во время согласования."); inStart.value = t.start; return; } t.start = inStart.value || ""; t.override = true; // manual edit enables override
+      // recalc duration if end exists
+      if(t.start && t.end){ const s=parseYMD(t.start), e=parseYMD(t.end); if(s && e) t.duration = businessDaysBetweenInclusive(s,e); }
       save();
     };
     tdStart.appendChild(inStart); tr.appendChild(tdStart);
@@ -317,27 +354,17 @@ function render(){
     // end
     const tdEnd = document.createElement("td");
     const inEnd = document.createElement("input"); inEnd.type="date"; inEnd.value = t.end || "";
-    inEnd.onchange = () => {
-      t.end = inEnd.value || "";
-      t.override = true; // manual change should enable override
-      if(t.start && t.end){
-        const s = parseYMD(t.start), e = parseYMD(t.end);
-        if(s && e) t.duration = Math.max(1, daysBetweenUTC(s,e) + 1);
-      }
-      save();
-    };
+    if(t.approval === "Согласование") inEnd.disabled = true;
+    inEnd.onchange = ()=>{ if(t.approval === "Согласование"){ alert("Нельзя менять дату во время согласования."); inEnd.value = t.end; return; } t.end = inEnd.value || ""; t.override = true; if(t.start && t.end){ const s=parseYMD(t.start), e=parseYMD(t.end); if(s && e) t.duration = businessDaysBetweenInclusive(s,e); } save(); };
     tdEnd.appendChild(inEnd); tr.appendChild(tdEnd);
 
     // duration
     const tdDur = document.createElement("td");
-    const inDur = document.createElement("input"); inDur.type="number"; inDur.min=1; inDur.value = t.duration || DEFAULT_DAYS; inDur.style.width="80px";
-    inDur.onchange = () => {
-      const v = Math.max(1, Number(inDur.value) || DEFAULT_DAYS);
-      t.duration = v;
-      // if start exists and no manual override of end, update end to start+duration-1
-      if(t.start && !t.override){
+    const inDur = document.createElement("input"); inDur.type="number"; inDur.min=1; inDur.value = t.duration || DEFAULT_DAYS; inDur.style.width="92px";
+    inDur.onchange = ()=>{ t.duration = Math.max(1, Number(inDur.value) || DEFAULT_DAYS); // if start exists and not override -> update end accordingly
+      if(t.start && !t.override && t.approval !== "Согласование"){
         const s = parseYMD(t.start);
-        t.end = fmtYMD(addDaysUTC(s, t.duration - 1));
+        t.end = fmtYMD(addBusinessDays(s, t.duration - 1));
       }
       save();
     };
@@ -345,26 +372,51 @@ function render(){
 
     // depends
     const tdDep = document.createElement("td");
-    const inDep = document.createElement("input"); inDep.type="text"; inDep.value = t.depends || "";
-    inDep.placeholder = "A1 или точное имя";
-    inDep.onchange = () => { t.depends = inDep.value.trim(); save(); };
+    const inDep = document.createElement("input"); inDep.type="text"; inDep.value = t.depends || ""; inDep.placeholder = "A1 or exact name";
+    inDep.onchange = ()=>{ t.depends = inDep.value.trim(); save(); };
     tdDep.appendChild(inDep); tr.appendChild(tdDep);
 
     // override
     const tdOv = document.createElement("td"); tdOv.className="center";
     const chk = document.createElement("input"); chk.type="checkbox"; chk.checked = !!t.override;
-    chk.onchange = () => { t.override = chk.checked; save(); };
+    chk.onchange = ()=>{ t.override = chk.checked; save(); };
     tdOv.appendChild(chk); tr.appendChild(tdOv);
+
+    // approval
+    const tdAp = document.createElement("td");
+    const selAp = document.createElement("select");
+    ["Не требуется","Согласование","Согласовано","На доработку"].forEach(opt=>{
+      const o=document.createElement("option"); o.value=o.textContent=opt; if(t.approval===opt) o.selected=true; selAp.appendChild(o);
+    });
+    selAp.onchange = ()=>{ t.approval = selAp.value; // if entering "Согласование" -> lock dates
+      if(t.approval === "Согласование"){ /* do nothing else */ }
+      // if switching to "На доработку" ensure correction field available (kept in model)
+      save();
+    };
+    tdAp.appendChild(selAp); tr.appendChild(tdAp);
+
+    // correction
+    const tdCorr = document.createElement("td");
+    const inCorr = document.createElement("input"); inCorr.type="number"; inCorr.style.width="90px"; inCorr.value = t.correction || 0;
+    // only meaningful when approval == "На доработку"
+    inCorr.disabled = (t.approval !== "На доработку");
+    inCorr.onchange = ()=>{ t.correction = Number(inCorr.value) || 0; // after changing correction, recompute end = start + duration-1 + correction (business)
+      if(t.start){
+        const s = parseYMD(t.start);
+        t.end = fmtYMD(addBusinessDays(addBusinessDays(s, t.duration - 1), t.correction));
+        t.duration = businessDaysBetweenInclusive(parseYMD(t.start), parseYMD(t.end));
+      }
+      save();
+    };
+    tdCorr.appendChild(inCorr); tr.appendChild(tdCorr);
 
     // priority
     const tdPr = document.createElement("td");
     const selPr = document.createElement("select");
     [["Высокий","🔥 Высокий"],["Средний","⚠️ Средний"],["Низкий","✅ Низкий"]].forEach(([val,lab])=>{
-      const o = document.createElement("option"); o.value=val; o.textContent=lab;
-      if(t.priority === val) o.selected = true;
-      selPr.appendChild(o);
+      const o=document.createElement("option"); o.value=val; o.textContent=lab; if(t.priority===val) o.selected=true; selPr.appendChild(o);
     });
-    selPr.onchange = ()=> { t.priority = selPr.value; save(); };
+    selPr.onchange = ()=>{ t.priority = selPr.value; save(); };
     tdPr.appendChild(selPr); tr.appendChild(tdPr);
 
     // owner
@@ -377,117 +429,93 @@ function render(){
     const tdSt = document.createElement("td");
     const selSt = document.createElement("select");
     ["Не начато","В работе","Ожидание","Готово","Заблокировано"].forEach(s=>{
-      const o = document.createElement("option"); o.value = s; o.textContent = s;
-      if(t.status === s) o.selected = true;
-      selSt.appendChild(o);
+      const o=document.createElement("option"); o.value=o.textContent=s; if(t.status===s) o.selected=true; selSt.appendChild(o);
     });
     selSt.onchange = ()=>{ t.status = selSt.value; save(); };
     tdSt.appendChild(selSt); tr.appendChild(tdSt);
 
     // actions
     const tdAct = document.createElement("td"); tdAct.className="center";
-    const btnUp = document.createElement("button"); btnUp.className="ghost"; btnUp.style.padding="6px 8px"; btnUp.textContent="↑";
-    btnUp.onclick = ()=>{ moveTask(t.id, -1); };
-    const btnDown = document.createElement("button"); btnDown.className="ghost"; btnDown.style.padding="6px 8px"; btnDown.textContent="↓";
-    btnDown.onclick = ()=>{ moveTask(t.id, 1); };
-    const btnDel = document.createElement("button"); btnDel.style.marginLeft="6px"; btnDel.textContent="Удалить";
-    btnDel.onclick = ()=>{ if(confirm('Удалить задачу '+t.id+'?')){ removeTask(t.id); } };
+    const btnUp = document.createElement("button"); btnUp.className="ghost"; btnUp.style.padding="6px 8px"; btnUp.textContent="↑"; btnUp.onclick = ()=>{ moveTask(t.id, -1); };
+    const btnDown = document.createElement("button"); btnDown.className="ghost"; btnDown.style.padding="6px 8px"; btnDown.textContent="↓"; btnDown.onclick = ()=>{ moveTask(t.id, 1); };
+    const btnDel = document.createElement("button"); btnDel.style.marginLeft="6px"; btnDel.textContent="Удалить"; btnDel.onclick = ()=>{ if(confirm('Удалить '+t.id+'?')) removeTask(t.id); };
     tdAct.appendChild(btnUp); tdAct.appendChild(btnDown); tdAct.appendChild(btnDel);
     tr.appendChild(tdAct);
 
     tbody.appendChild(tr);
   }
 
-  // project title persist
-  const storedTitle = localStorage.getItem("project.title");
-  if(storedTitle) document.getElementById("projectTitle").value = storedTitle;
+  // persist title
+  const st = localStorage.getItem("project.title");
+  if(st) document.getElementById("projectTitle").value = st;
   drawGantt();
 }
 
 /* CRUD helpers */
-function genId(){ let n=1; while(tasks.some(t=> t.id === `A${n}`)) n++; return `A${n}`; }
+function genId(){
+  let n=1; while(tasks.some(t=> t.id===`A${n}`)) n++; return `A${n}`;
+}
 function addTask(){
   const name = document.getElementById("taskName").value.trim();
-  if(!name){ alert("Название задачи нельзя пустым"); return; }
+  if(!name){ alert("Введите название задачи"); return; }
   const start = document.getElementById("taskStart").value || "";
   const end = document.getElementById("taskEnd").value || "";
   const dur = Number(document.getElementById("taskDuration").value) || DEFAULT_DAYS;
   const depends = document.getElementById("taskDepends").value.trim() || "";
+  const approval = document.getElementById("taskApproval").value;
+  const correction = Number(document.getElementById("taskCorrection").value) || 0;
   const priority = document.getElementById("taskPriority").value;
   const owner = document.getElementById("taskOwner").value.trim() || "";
   const status = document.getElementById("taskStatus").value;
-  const obj = { id: genId(), name, start, end, duration: Math.max(1,dur), depends, override:false, priority, owner, status };
-  // if start exists and no end -> compute end from duration
-  if(obj.start && !obj.end){
-    const s = parseYMD(obj.start);
-    if(s) obj.end = fmtYMD(addDaysUTC(s, obj.duration - 1));
-  }
-  // if end exists and no start -> compute start from duration
-  if(obj.end && !obj.start){
-    const e = parseYMD(obj.end);
-    if(e) obj.start = fmtYMD(addDaysUTC(e, - (obj.duration - 1)));
-  }
+
+  const obj = { id: genId(), name, start, end, duration: Math.max(1,dur), depends, override:false, approval, correction, priority, owner, status };
+  // derive end/start if only one present
+  if(obj.start && !obj.end){ obj.end = fmtYMD(addBusinessDays(parseYMD(obj.start), obj.duration - 1)); }
+  if(obj.end && !obj.start){ obj.start = fmtYMD(addBusinessDays(parseYMD(obj.end), - (obj.duration - 1))); }
   tasks.push(obj);
   // clear inputs
-  document.getElementById("taskName").value = "";
-  document.getElementById("taskStart").value = "";
-  document.getElementById("taskEnd").value = "";
-  document.getElementById("taskDuration").value = "";
-  document.getElementById("taskDepends").value = "";
-  document.getElementById("taskOwner").value = "";
+  document.getElementById("taskName").value=""; document.getElementById("taskStart").value=""; document.getElementById("taskEnd").value="";
+  document.getElementById("taskDuration").value=""; document.getElementById("taskDepends").value=""; document.getElementById("taskCorrection").value="";
+  document.getElementById("taskOwner").value="";
   save();
 }
 function removeTask(id){
-  tasks = tasks.filter(t=> t.id !== id);
-  tasks.forEach(t=> { if(t.depends === id) t.depends = ""; });
+  tasks = tasks.filter(t=> t.id !== id); tasks.forEach(t=> { if(t.depends === id) t.depends = ""; });
   save();
 }
 function moveTask(id, dir){
-  const idx = tasks.findIndex(t=> t.id === id);
-  if(idx < 0) return;
-  const to = idx + dir;
-  if(to < 0 || to >= tasks.length) return;
-  const tmp = tasks[to]; tasks[to] = tasks[idx]; tasks[idx] = tmp;
-  save();
+  const idx = tasks.findIndex(t=> t.id===id); if(idx<0) return; const to = idx + dir; if(to<0||to>=tasks.length) return; const tmp = tasks[to]; tasks[to]=tasks[idx]; tasks[idx]=tmp; save();
 }
-function clearAll(){ if(confirm("Удалить все задачи?")){ tasks = []; save(); } }
+function clearAll(){ if(confirm("Удалить все?")){ tasks=[]; save(); } }
 
 /* CSV export/import */
 function downloadCSV(){
-  const hdr = ["ID","Name","Start","End","Duration","Depends","Override","Priority","Owner","Status"];
-  const rows = tasks.map(t => [t.id, `"${(t.name||"").replace(/"/g,'""')}"`, t.start||"", t.end||"", String(t.duration||""), `"${(t.depends||"").replace(/"/g,'""')}"`, t.override? "1":"0", t.priority||"", t.owner||"", t.status||""]);
-  const txt = [hdr.join(","), ...rows.map(r=>r.join(","))].join("\n");
-  const blob = new Blob([txt], {type:"text/csv;charset=utf-8"});
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a"); a.href = url; a.download = "tasks.csv"; a.click(); URL.revokeObjectURL(url);
+  const hdr = ["ID","Name","Start","End","Duration","Depends","Override","Approval","Correction","Priority","Owner","Status"];
+  const rows = tasks.map(t => [t.id, `"${(t.name||"").replace(/"/g,'""')}"`, t.start||"", t.end||"", String(t.duration||""), `"${(t.depends||"").replace(/"/g,'""')}"`, t.override?"1":"0", t.approval||"", String(t.correction||"0"), t.priority||"", t.owner||"", t.status||""]);
+  const txt = [hdr.join(","), ...rows.map(r=> r.join(","))].join("\n");
+  const blob = new Blob([txt], {type:"text/csv;charset=utf-8"}); const url = URL.createObjectURL(blob); const a=document.createElement("a"); a.href=url; a.download="tasks.csv"; a.click(); URL.revokeObjectURL(url);
 }
 function importCSVPrompt(){
-  const inp = document.createElement("input"); inp.type="file"; inp.accept=".csv";
-  inp.onchange = e=>{
-    const f = e.target.files[0]; if(!f) return;
-    const reader = new FileReader();
-    reader.onload = ev => { try{ parseCSV(ev.target.result); save(); } catch(err){ alert("Ошибка импорта: "+err); } };
-    reader.readAsText(f,"utf-8");
-  };
-  inp.click();
+  const inp = document.createElement("input"); inp.type="file"; inp.accept=".csv"; inp.onchange = e=>{ const f = e.target.files[0]; if(!f) return; const r=new FileReader(); r.onload=ev=>{ try{ parseCSV(ev.target.result); save(); } catch(err){ alert("Ошибка импорта: "+err); } }; r.readAsText(f,"utf-8"); }; inp.click();
 }
 function parseCSV(text){
-  const lines = text.split(/\r?\n/).filter(Boolean);
-  if(lines.length < 2) throw "CSV пуст или некорректен";
+  const lines = text.split(/\r?\n/).filter(Boolean); if(lines.length<2) throw "CSV пуст";
   const newTasks = [];
   for(let i=1;i<lines.length;i++){
     const cols = csvSplit(lines[i]);
     const t = {
       id: cols[0] || genId(),
       name: cols[1] ? cols[1].replace(/^"|"$/g,"").replace(/""/g,'"') : "",
-      start: cols[2] || "",
-      end: cols[3] || "",
+      start: cols[2]||"",
+      end: cols[3]||"",
       duration: Number(cols[4]) || DEFAULT_DAYS,
       depends: cols[5] ? cols[5].replace(/^"|"$/g,"").replace(/""/g,'"') : "",
       override: (cols[6]||"") === "1",
-      priority: cols[7] || "Средний",
-      owner: cols[8] || "",
-      status: cols[9] || "Не начато"
+      approval: cols[7] || "Не требуется",
+      correction: Number(cols[8]) || 0,
+      priority: cols[9] || "Средний",
+      owner: cols[10] || "",
+      status: cols[11] || "Не начато"
     };
     newTasks.push(t);
   }
@@ -496,7 +524,7 @@ function parseCSV(text){
 function csvSplit(line){
   const out=[]; let cur=""; let q=false;
   for(let i=0;i<line.length;i++){
-    const ch = line[i];
+    const ch=line[i];
     if(ch === '"'){ if(q && line[i+1]==='"'){ cur+='"'; i++; } else q=!q; continue; }
     if(ch === ',' && !q){ out.push(cur); cur=""; continue; }
     cur += ch;
@@ -506,15 +534,15 @@ function csvSplit(line){
 }
 
 /* =========================
-   GANTT drawing (UTC-safe)
+   Gantt drawing
    ========================= */
 function drawGantt(){
-  resolveDependencies();
+  resolveAll();
   const canvas = document.getElementById("ganttCanvas");
   const ctx = canvas.getContext("2d");
   const containerWidth = canvas.clientWidth;
   canvas.width = Math.max(700, Math.floor(containerWidth));
-  const width = canvas.width, height = canvas.height = 420;
+  const width = canvas.width, height = canvas.height = 460;
   ctx.clearRect(0,0,width,height);
 
   const valid = tasks.filter(t => parseYMD(t.start) && parseYMD(t.end));
@@ -522,43 +550,60 @@ function drawGantt(){
     ctx.fillStyle = "#666"; ctx.font = "14px Arial"; ctx.fillText("Нет задач с корректными датами для Ганта", 20, 24); return;
   }
 
-  // compute min/max
+  // compute global min/max
   let min = parseYMD(valid[0].start), max = parseYMD(valid[0].end);
-  valid.forEach(t => {
-    const s = parseYMD(t.start), e = parseYMD(t.end);
-    if(s && s < min) min = s;
-    if(e && e > max) max = e;
-  });
-  min = addDaysUTC(min, -1); max = addDaysUTC(max, 1);
-  const totalDays = daysBetweenUTC(min, max) + 1;
-
-  const leftPad = 150, rightPad = 30;
+  valid.forEach(t => { const s=parseYMD(t.start), e=parseYMD(t.end); if(s && s < min) min = s; if(e && e > max) max = e; });
+  min = addBusinessDays(min, -1); max = addBusinessDays(max, 1);
+  const totalDays = businessDaysBetweenInclusive(min, max);
+  const leftPad = 160, rightPad = 40;
   const usable = width - leftPad - rightPad;
   const pxPerDay = Math.max(6, usable / Math.max(1, totalDays));
 
   // header background
-  ctx.fillStyle = "#fafbff";
-  ctx.fillRect(leftPad, 0, usable, 28);
+  ctx.fillStyle = "#fafbff"; ctx.fillRect(leftPad, 0, usable, 28);
   ctx.font = "12px Arial";
-  for(let d=0; d<= totalDays; d++){
+  // draw grid and date labels (iterate real calendar days but place only business days)
+  let dayIndex = 0;
+  for(let d=0; d<3650; d++){ // safety limit
     const cur = addDaysUTC(min, d);
-    const x = leftPad + Math.round(d * pxPerDay);
+    if(cur > max) break;
+    if(isWeekend(cur)) continue;
+    const x = leftPad + Math.round(dayIndex * pxPerDay);
     ctx.strokeStyle = "#f0f2f7"; ctx.beginPath(); ctx.moveTo(x+0.5, 28); ctx.lineTo(x+0.5, height - 16); ctx.stroke();
-    if(pxPerDay > 14 || d % Math.max(1, Math.ceil(3 / (pxPerDay/8))) === 0){
-      ctx.fillStyle = "#333"; ctx.fillText(cur.toISOString().slice(0,10), x+2, 18);
+    if(pxPerDay > 14 || dayIndex % Math.max(1, Math.ceil(3 / (pxPerDay/8))) === 0){
+      ctx.fillStyle = "#333";
+      ctx.fillText(fmtYMD(cur), x+2, 18);
     }
+    dayIndex++;
   }
 
-  const rowH = 36;
+  // draw rows
+  const rowH = 38;
   valid.forEach((t, idx) => {
     const y = 36 + idx * rowH;
-    ctx.fillStyle = "#111"; ctx.font = "13px Arial"; ctx.fillText(`${t.id} ${t.name}`, 8, y + 14);
-    ctx.fillStyle = idx % 2 === 0 ? "#fff" : "#fbfcff"; ctx.fillRect(leftPad, y, usable, rowH - 6);
+    ctx.fillStyle = "#111"; ctx.font = "13px Arial"; ctx.fillText(`${t.id} ${t.name}`, 10, y + 16);
+    ctx.fillStyle = idx%2===0 ? "#fff" : "#fbfcff"; ctx.fillRect(leftPad, y, usable, rowH - 6);
 
     const s = parseYMD(t.start), e = parseYMD(t.end);
     if(!s || !e) return;
-    const offset = daysBetweenUTC(min, s);
-    const dur = daysBetweenUTC(s, e) + 1;
+    // compute day offset among business days from min
+    let offset = 0, cum = 0;
+    for(let d=0;;d++){
+      const cur = addDaysUTC(min, d);
+      if(cur > s) break;
+      if(!isWeekend(cur)){
+        if(cur < s) cum++;
+        else if(fmtYMD(cur) === fmtYMD(s)) { /* s matches this business day */ }
+      }
+      if(cur >= s) break;
+    }
+    // simpler: compute businessDays between min and s, exclusive of min? we'll compute incrementally:
+    offset = 0; let cur = new Date(min.getTime());
+    while(cur < s){
+      if(!isWeekend(cur)) offset++;
+      cur = addDaysUTC(cur,1);
+    }
+    const dur = businessDaysBetweenInclusive(s,e);
     const x = leftPad + Math.round(offset * pxPerDay);
     const w = Math.max(6, Math.round(dur * pxPerDay));
 
@@ -566,48 +611,35 @@ function drawGantt(){
     if(t.status === "Готово") color = "#2db47e";
     if(t.status === "Заблокировано") color = "#ff6b6b";
 
-    // rounded bar
+    // draw bar
     ctx.fillStyle = color;
-    roundRect(ctx, x+2, y+6, w-4, 22, 6, true, false);
+    roundRect(ctx, x+2, y+6, w-4, 24, 6, true, false);
 
     ctx.fillStyle = "#fff"; ctx.font = "12px Arial";
-    if(w > 80){
-      ctx.fillText(t.name, x + 10, y + 20);
-    } else {
-      ctx.fillStyle = "#333"; ctx.fillText(t.name, x + w + 6, y + 18);
-    }
-    // draw start & end small
+    if(w > 80) ctx.fillText(t.name, x + 10, y + 22);
+    else { ctx.fillStyle = "#333"; ctx.fillText(t.name, x + w + 8, y + 21); }
+
+    // draw small start/end
     ctx.fillStyle = "#666"; ctx.font = "11px Arial";
     ctx.fillText(fmtYMD(s), x, y + 36);
     ctx.fillText(fmtYMD(e), x + Math.max(6, w - 60), y + 36);
   });
 
-  ctx.strokeStyle = "#e9eefb"; ctx.strokeRect(leftPad, 28, usable, valid.length * rowH);
+  ctx.strokeStyle = "#e9eefb";
+  ctx.strokeRect(leftPad, 28, usable, valid.length * rowH);
 
   function roundRect(ctx,x,y,w,h,r,fill,stroke){
     if(w < 2*r) r = w/2; if(h < 2*r) r = h/2;
-    ctx.beginPath();
-    ctx.moveTo(x+r,y); ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r); ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath();
+    ctx.beginPath(); ctx.moveTo(x+r,y); ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r); ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath();
     if(fill) ctx.fill(); if(stroke) ctx.stroke();
   }
 }
 
 /* =========================
-   Init and bindings
+   Init boot
    ========================= */
-document.getElementById("projectTitle").addEventListener("change", () => {
-  localStorage.setItem("project.title", document.getElementById("projectTitle").value);
-});
-
-function boot(){
-  const t = localStorage.getItem("project.title");
-  if(t) document.getElementById("projectTitle").value = t;
-  load();
-  render();
-  window.addEventListener("resize", () => { drawGantt(); });
-  // expose for debugging
-  window.tracker = { tasks, save, load, render, drawGantt, resolveDependencies };
-}
+document.getElementById("projectTitle").addEventListener("change", ()=> localStorage.setItem("project.title", document.getElementById("projectTitle").value));
+function boot(){ const t = localStorage.getItem("project.title"); if(t) document.getElementById("projectTitle").value = t; load(); render(); window.addEventListener("resize", ()=> drawGantt()); window.tracker = { tasks, save, load, render, drawGantt, resolveAll }; }
 boot();
 
 </script>
