@@ -1,109 +1,81 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-<meta charset="utf-8"/>
-<meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Project Tracker — Гант</title>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Tracker — Гант (мягкие зависимости)</title>
 <style>
   :root{
-    --bg:#f5f7fb;
-    --card:#fff;
-    --muted:#6b6f76;
-    --accent:#4666ff;
-    --success:#24b47e;
-    --danger:#ff6b6b;
-    --shadow: 0 6px 18px rgba(42,52,90,0.06);
+    --bg:#f6f8fb; --card:#fff; --accent:#4666ff; --muted:#6b6f76;
+    --ok:#2db47e; --danger:#ff6b6b; --shadow: 0 8px 24px rgba(20,30,70,0.06);
+    --prio-high:#ffdddd; --prio-mid:#fff6e6; --prio-low:#eefaf0;
   }
   *{box-sizing:border-box}
-  body{
-    background:var(--bg);
-    font-family: Inter, Roboto, Arial, sans-serif;
-    color:#222;
-    margin:0;
-    padding:28px;
-    display:flex;
-    justify-content:center;
-  }
-  .wrap{width:100%;max-width:1100px}
-  header{
-    display:flex;
-    gap:12px;
-    align-items:center;
-    margin-bottom:18px;
-  }
-  header h1{margin:0;font-size:20px}
-  header input[type="text"]{
-    font-size:18px;padding:8px 10px;border-radius:8px;border:1px solid #e1e6f0;background:white;width:100%;
-  }
-  .topbar{display:flex;gap:10px;margin-bottom:12px;align-items:center}
+  body{background:var(--bg);font-family:Inter, Roboto, Arial, sans-serif;color:#222;margin:0;padding:28px;display:flex;justify-content:center}
+  .wrap{width:100%;max-width:1180px}
+  header{display:flex;gap:12px;align-items:center;margin-bottom:14px}
+  #projectTitle{flex:1;padding:10px;border-radius:10px;border:1px solid #e8eefb;font-size:18px}
   .card{background:var(--card);border-radius:12px;padding:12px;border:1px solid #eef2fb;box-shadow:var(--shadow);margin-bottom:14px}
-  .controls{display:flex;gap:8px;flex-wrap:wrap}
-  button{background:var(--accent);color:white;border:none;padding:8px 10px;border-radius:8px;cursor:pointer;font-weight:600}
+  .controls{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  input[type="text"], input[type="date"], input[type="number"], select{
+    padding:8px;border-radius:8px;border:1px solid #e6ebf8;background:white;font-size:14px;
+  }
+  button{background:var(--accent);color:#fff;border:none;padding:8px 10px;border-radius:8px;cursor:pointer}
   button.ghost{background:transparent;color:var(--accent);border:1px solid rgba(70,102,255,0.12)}
-  button.warn{background:var(--danger)}
-  .grid{display:grid;grid-template-columns:1fr 380px;gap:12px}
+  .grid{display:grid;grid-template-columns:1fr 420px;gap:12px}
   @media (max-width:1000px){ .grid{grid-template-columns:1fr} }
 
   table{width:100%;border-collapse:collapse;font-size:14px}
   th,td{padding:8px;border-bottom:1px solid #f0f3fa;vertical-align:middle}
   th{background:#fbfcff;color:var(--muted);font-weight:700;text-align:left}
-  .id{width:64px;color:#445; font-weight:700}
-  input[type="date"], input[type="text"], select{padding:6px;border-radius:8px;border:1px solid #e6ebf8;background:white}
-  .small{font-size:12px;color:var(--muted)}
+  .id{width:62px;font-weight:700;color:#334}
   .center{text-align:center}
   .nowrap{white-space:nowrap}
-  .priority-chip{display:inline-flex;gap:6px;align-items:center;padding:6px 8px;border-radius:999px;font-weight:600}
-  .prio-high{background:#ffe8e8;color:#c33;border:1px solid rgba(255,107,107,0.12)}
-  .prio-mid{background:#fff4e6;color:#c76b11;border:1px solid rgba(255,170,0,0.08)}
-  .prio-low{background:#e9f9f0;color:#0a7a4a;border:1px solid rgba(36,180,126,0.08)}
+  .small{font-size:13px;color:var(--muted)}
+  .prio-chip{display:inline-flex;gap:8px;align-items:center;padding:6px 8px;border-radius:999px;font-weight:700}
+  .prio-high{background:var(--prio-high);color:#c0392b}
+  .prio-mid{background:var(--prio-mid);color:#b36b00}
+  .prio-low{background:var(--prio-low);color:#0a7a4a}
 
-  /* Gantt */
   .gantt-wrap{overflow:auto;padding:8px}
   .gantt-canvas{background:white;border-radius:10px;border:1px solid #eef2fb;padding:10px}
   .legend{display:flex;gap:8px;align-items:center;margin-top:8px}
   .legend .item{display:flex;gap:6px;align-items:center;font-size:13px;color:var(--muted)}
   .bar-rect{width:18px;height:10px;border-radius:4px;display:inline-block}
-
-  .actions{display:flex;gap:8px;align-items:center;margin-left:auto}
+  .actions{display:flex;gap:8px;align-items:center}
   .muted{color:var(--muted)}
 </style>
 </head>
 <body>
   <div class="wrap">
-    <header style="margin-bottom:8px">
-      <input id="projectTitle" type="text" value="Название проекта" />
-    </header>
-
-    <div class="card topbar" style="align-items:flex-start">
-      <div style="flex:1">
-        <div style="display:flex;gap:8px;align-items:center">
-          <input id="taskName" type="text" placeholder="Новая задача — название" style="flex:1"/>
-          <input id="taskStart" type="date" />
-          <input id="taskEnd" type="date" />
-          <input id="taskDepends" type="text" placeholder="Depends (ID или имя)" style="width:130px"/>
-          <select id="taskPriority">
-            <option value="Высокий">🔥 Высокий</option>
-            <option value="Средний" selected>⚠️ Средний</option>
-            <option value="Низкий">✅ Низкий</option>
-          </select>
-          <input id="taskOwner" type="text" placeholder="Ответственный" style="width:120px"/>
-          <select id="taskStatus">
-            <option>Не начато</option><option>В работе</option><option>Ожидание</option><option>Готово</option>
-          </select>
-          <button onclick="addTask()">Добавить</button>
-        </div>
-        <div class="small" style="margin-top:8px">Зависимость: указывай <strong>ID</strong> (A1, A2...) или точное имя предшественника. Если задача зависит — её <em>Start</em> будет равен <em>End</em> предшественника.</div>
-      </div>
-
+    <header>
+      <input id="projectTitle" placeholder="Название проекта" />
       <div class="actions">
         <button class="ghost" onclick="downloadCSV()">Экспорт CSV</button>
         <button class="ghost" onclick="importCSVPrompt()">Импорт CSV</button>
         <button class="ghost" onclick="clearAll()">Очистить</button>
       </div>
+    </header>
+
+    <div class="card controls">
+      <input id="taskName" type="text" placeholder="Название задачи (обязательно)" style="min-width:180px"/>
+      <input id="taskStart" type="date" />
+      <input id="taskEnd" type="date" />
+      <input id="taskDuration" type="number" min="1" placeholder="Длит. дн." style="width:90px"/>
+      <input id="taskDepends" type="text" placeholder="Depends (ID или имя)" style="width:140px"/>
+      <select id="taskPriority">
+        <option value="Высокий">🔥 Высокий</option>
+        <option value="Средний" selected>⚠️ Средний</option>
+        <option value="Низкий">✅ Низкий</option>
+      </select>
+      <input id="taskOwner" type="text" placeholder="Ответственный" style="width:130px"/>
+      <select id="taskStatus">
+        <option>Не начато</option><option>В работе</option><option>Ожидание</option><option>Готово</option><option>Заблокировано</option>
+      </select>
+      <button onclick="addTask()">Добавить</button>
     </div>
 
     <div class="grid">
-      <!-- left: table -->
       <div class="card">
         <table id="tasksTable" role="grid">
           <thead>
@@ -112,6 +84,7 @@
               <th>Задача</th>
               <th>Start</th>
               <th>End</th>
+              <th>Длит. (дн)</th>
               <th>Depends</th>
               <th>Override</th>
               <th>Приоритет</th>
@@ -122,22 +95,22 @@
           </thead>
           <tbody></tbody>
         </table>
-        <div style="margin-top:8px" class="small muted">Автосохранение: LocalStorage. После редактирования — данные применяются мгновенно и рефрешат диаграмму.</div>
+        <div style="margin-top:8px" class="small muted">Soft-dependencies: если зависимость задана и Override выключен — Start зависимости автоматически становится равен End предшественника. При ручной правке Start/End Override включается автоматически.</div>
       </div>
 
-      <!-- right: gantt -->
       <div>
         <div class="card">
           <div style="display:flex;align-items:center;justify-content:space-between">
             <div><strong>Диаграмма Ганта</strong></div>
             <div class="small muted">Масштаб по дням. Обновляется автоматически.</div>
           </div>
+
           <div class="gantt-wrap" style="margin-top:10px">
             <div class="gantt-canvas">
-              <canvas id="ganttCanvas" width="820" height="360" style="width:100%;height:360px;display:block"></canvas>
+              <canvas id="ganttCanvas" width="820" height="420" style="width:100%;height:420px;display:block"></canvas>
             </div>
             <div class="legend">
-              <div class="item"><span class="bar-rect" style="background:#4666ff"></span> Задача</div>
+              <div class="item"><span class="bar-rect" style="background:#4666ff"></span> Активная</div>
               <div class="item"><span class="bar-rect" style="background:#2db47e"></span> Готово</div>
               <div class="item"><span class="bar-rect" style="background:#ff6b6b"></span> Заблокировано</div>
             </div>
@@ -145,117 +118,170 @@
         </div>
 
         <div style="height:12px"></div>
-        <div class="card small muted">Совет: используй ID A1, A2... — при добавлении они генерируются автоматически.</div>
+        <div class="card small muted">ID генерируются автоматически (A1, A2…). Для корректной работы зависимостей удобнее указывать ID.</div>
       </div>
     </div>
   </div>
 
 <script>
-/* ======== Data model and storage ======== */
-const STORAGE_KEY = "project.tracker.v2";
-let tasks = []; // {id, name, start, end, depends, override (bool), priority, owner, status}
-const defaultDurationDays = 3; // used when end missing: end = start + (defaultDurationDays - 1)
-
-/* utils */
-const fmt = d => d ? new Date(d).toISOString().slice(0,10) : "";
-const parse = s => {
+/* =========================
+   Date helpers (timezone-safe)
+   We treat dates as yyyy-mm-dd strings and do arithmetic in UTC midnight.
+   ========================= */
+function parseYMD(s){
+  // returns Date (UTC midnight) or null
   if(!s) return null;
-  const t = new Date(s + "T00:00:00");
-  return isNaN(t) ? null : t;
-};
-const addDays = (d, n) => { const x = new Date(d); x.setDate(x.getDate() + n); return x; };
-const daysBetween = (a,b) => Math.round((b - a) / (24*3600*1000));
-
-function save(){
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks));
-  render();
+  // expect exactly YYYY-MM-DD
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s);
+  if(!m) return null;
+  const y = Number(m[1]), mo = Number(m[2]), d = Number(m[3]);
+  return new Date(Date.UTC(y, mo-1, d));
 }
+function fmtYMD(dt){
+  if(!dt) return "";
+  const y = dt.getUTCFullYear();
+  const m = String(dt.getUTCMonth() + 1).padStart(2,"0");
+  const d = String(dt.getUTCDate()).padStart(2,"0");
+  return `${y}-${m}-${d}`;
+}
+function addDaysUTC(dt, n){
+  const copy = new Date(dt.getTime());
+  copy.setUTCDate(copy.getUTCDate() + n);
+  return copy;
+}
+function daysBetweenUTC(a,b){
+  // a,b Dates (UTC)
+  const diff = Math.round((b.getTime() - a.getTime()) / (24*3600*1000));
+  return diff;
+}
+
+/* =========================
+   Data model + storage
+   ========================= */
+const STORAGE_KEY = "tracker.softdeps.v1";
+let tasks = []; // {id,name,start,end,duration,depends,override,priority,owner,status}
+const DEFAULT_DAYS = 3;
+
 function load(){
   const raw = localStorage.getItem(STORAGE_KEY);
   if(raw){
-    try{ tasks = JSON.parse(raw) } catch(e){ tasks = []; }
-  } else {
-    // sample initial
+    try{ tasks = JSON.parse(raw); }
+    catch(e){ tasks = []; }
+  }
+  if(!tasks || tasks.length === 0){
+    // initial sample
+    const today = fmtYMD(new Date(Date.now()));
     tasks = [
-      {id:"A1", name:"Обмер", start:fmt(new Date()), end:fmt(addDays(new Date(),2)), depends:"", override:false, priority:"Высокий", owner:"Алиса", status:"В работе"},
-      {id:"A2", name:"Планировки", start:"", end:"", depends:"A1", override:false, priority:"Средний", owner:"Саша", status:"Не начато"},
-      {id:"A3", name:"Визуализации", start:"", end:"", depends:"A2", override:false, priority:"Низкий", owner:"Оля", status:"Не начато"}
+      {id:"A1", name:"Обмер", start: today, end: fmtYMD(addDaysUTC(parseYMD(today), 2)), duration:3, depends:"", override:false, priority:"Высокий", owner:"Алиса", status:"В работе"},
+      {id:"A2", name:"Планировки", start:"", end:"", duration:5, depends:"A1", override:false, priority:"Средний", owner:"Саша", status:"Не начато"},
+      {id:"A3", name:"Чертежи", start:"", end:"", duration:4, depends:"A2", override:false, priority:"Низкий", owner:"Оля", status:"Не начато"}
     ];
     save();
   }
 }
+function save(){
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks));
+  render();
+}
 
-/* ========= Core: dependency resolution =========
- Rules:
-  - If task.depends references a task (by id or exact name) and override==false:
-      task.start := predecessor.end (same day)
-  - If task.start exists and task.end missing -> end = start + (defaultDurationDays-1)
-  - If end < start -> end = start
-  - Repeat iteratively until stable (max passes = tasks.length+5)
-*/
+/* =========================
+   Dependency resolution (soft)
+   - If task.depends references predecessor (by id or exact name) and override==false:
+       start(task) := end(pred)  (same day)
+       end(task) := start + duration - 1   (unless user manually set a different end previously)
+   - If start set but no end -> end = start + duration -1
+   - If user manually edits start or end -> override = true for that task
+   Implementation:
+     - iterative passes until stable (max passes)
+     - we preserve duration per task (tasks[i].duration)
+   ========================= */
 function resolveDependencies(){
-  const map = {};
-  tasks.forEach(t => map[t.id] = t);
-  // also allow lookup by name
-  tasks.forEach(t => map[t.name] = t);
+  const lookup = {};
+  tasks.forEach(t => { lookup[t.id] = t; lookup[t.name] = t; });
 
-  // initialize dates as Date objects for computation
+  // ensure duration numbers
   tasks.forEach(t => {
-    t._start = parse(t.start);
-    t._end = parse(t.end);
+    t.duration = Number(t.duration) || DEFAULT_DAYS;
   });
 
   let changed = true;
   let passes = 0;
-  const maxPasses = tasks.length + 5;
+  const maxPasses = tasks.length + 8;
 
   while(changed && passes < maxPasses){
     changed = false;
     passes++;
     for(const t of tasks){
-      // if depends and predecessor exists and not override -> set start = pred.end
+      // compute startDate and endDate as Date objects
+      let s = parseYMD(t.start);
+      let e = parseYMD(t.end);
+
+      // if depends & predecessor exists & not override
       if(t.depends && !t.override){
-        const pred = map[t.depends];
-        if(pred && parse(pred.end)){
-          const predEndDate = parse(pred.end);
-          // rule: dependent start = pred.end (same day)
-          const desiredStart = fmt(predEndDate);
-          if(t.start !== desiredStart){
-            t.start = desiredStart;
-            t._start = parse(t.start);
-            changed = true;
-          }
-          // if no end or end < start -> set end = start + defaultDuration-1
-          if(!t.end || parse(t.end) < t._start){
-            const newEnd = fmt(addDays(t._start, defaultDurationDays - 1));
-            if(t.end !== newEnd){
-              t.end = newEnd; t._end = parse(t.end); changed = true;
+        const pred = lookup[t.depends];
+        if(pred && pred.end){
+          const predEnd = parseYMD(pred.end);
+          if(predEnd){
+            const desiredStart = fmtYMD(predEnd); // exactly same day as pred.end
+            if(t.start !== desiredStart){
+              t.start = desiredStart;
+              s = parseYMD(t.start);
+              changed = true;
             }
-          }
-        }
-      } else {
-        // no depends or override: if start exists and end missing -> create end
-        if(t.start && (!t.end || parse(t.end) < parse(t.start))){
-          const s = parse(t.start);
-          if(s){
-            const newEnd = fmt(addDays(s, defaultDurationDays - 1));
-            if(t.end !== newEnd){
-              t.end = newEnd; t._end = parse(t.end); changed = true;
+            // set end based on duration unless user set a custom end that is later than computed
+            const desiredEnd = fmtYMD(addDaysUTC(s, t.duration - 1));
+            if(!t.end || parseYMD(t.end) < s || t._lastAutoEnd === t.end){
+              if(t.end !== desiredEnd){
+                t.end = desiredEnd;
+                changed = true;
+              }
             }
+            t._lastAutoEnd = t.end;
+            continue; // handled
           }
         }
       }
-    }
-  }
 
-  // final normalization: ensure strings are formatted
-  tasks.forEach(t=>{
-    t.start = fmt(parse(t.start)) || "";
-    t.end = fmt(parse(t.end)) || "";
+      // if no depends or override: if start exists and no valid end -> set end based on duration
+      if(t.start){
+        s = parseYMD(t.start);
+        if(!s) continue;
+        const desiredEnd = fmtYMD(addDaysUTC(s, t.duration - 1));
+        if(!t.end || parseYMD(t.end) < s || t._lastAutoEnd === t.end){
+          if(t.end !== desiredEnd){
+            t.end = desiredEnd;
+            changed = true;
+          }
+        }
+        t._lastAutoEnd = t.end;
+      } else {
+        // no start: if end exists and no start -> try to derive start based on duration
+        if(t.end){
+          e = parseYMD(t.end);
+          if(e){
+            const desiredStart = fmtYMD(addDaysUTC(e, - (t.duration - 1)));
+            if(t.start !== desiredStart){
+              t.start = desiredStart;
+              changed = true;
+            }
+            t._lastAutoEnd = t.end;
+          }
+        }
+      }
+    } // end for
+  } // end while
+
+  // normalize strings
+  tasks.forEach(t => {
+    t.start = parseYMD(t.start) ? fmtYMD(parseYMD(t.start)) : "";
+    t.end = parseYMD(t.end) ? fmtYMD(parseYMD(t.end)) : "";
+    t.duration = Number(t.duration) || DEFAULT_DAYS;
   });
 }
 
-/* ========= UI Rendering ========= */
+/* =========================
+   UI rendering & bindings
+   ========================= */
 function render(){
   resolveDependencies();
   const tbody = document.querySelector("#tasksTable tbody");
@@ -268,21 +294,54 @@ function render(){
 
     // name
     const tdName = document.createElement("td");
-    const inpName = document.createElement("input"); inpName.type="text"; inpName.value = t.name;
-    inpName.onchange = () => { t.name = inpName.value.trim(); save(); };
-    tdName.appendChild(inpName); tr.appendChild(tdName);
+    const inName = document.createElement("input"); inName.type="text"; inName.value = t.name || "";
+    inName.onchange = () => { t.name = inName.value.trim(); save(); };
+    tdName.appendChild(inName); tr.appendChild(tdName);
 
     // start
     const tdStart = document.createElement("td");
     const inStart = document.createElement("input"); inStart.type="date"; inStart.value = t.start || "";
-    inStart.onchange = () => { t.start = inStart.value || ""; save(); };
+    inStart.onchange = () => {
+      // when user edits start manually -> set override = true
+      t.start = inStart.value || "";
+      t.override = true;
+      // recalc duration cache if end exists
+      if(t.start && t.end){
+        const s = parseYMD(t.start), e = parseYMD(t.end);
+        if(s && e) t.duration = Math.max(1, daysBetweenUTC(s,e) + 1);
+      }
+      save();
+    };
     tdStart.appendChild(inStart); tr.appendChild(tdStart);
 
     // end
     const tdEnd = document.createElement("td");
     const inEnd = document.createElement("input"); inEnd.type="date"; inEnd.value = t.end || "";
-    inEnd.onchange = () => { t.end = inEnd.value || ""; save(); };
+    inEnd.onchange = () => {
+      t.end = inEnd.value || "";
+      t.override = true; // manual change should enable override
+      if(t.start && t.end){
+        const s = parseYMD(t.start), e = parseYMD(t.end);
+        if(s && e) t.duration = Math.max(1, daysBetweenUTC(s,e) + 1);
+      }
+      save();
+    };
     tdEnd.appendChild(inEnd); tr.appendChild(tdEnd);
+
+    // duration
+    const tdDur = document.createElement("td");
+    const inDur = document.createElement("input"); inDur.type="number"; inDur.min=1; inDur.value = t.duration || DEFAULT_DAYS; inDur.style.width="80px";
+    inDur.onchange = () => {
+      const v = Math.max(1, Number(inDur.value) || DEFAULT_DAYS);
+      t.duration = v;
+      // if start exists and no manual override of end, update end to start+duration-1
+      if(t.start && !t.override){
+        const s = parseYMD(t.start);
+        t.end = fmtYMD(addDaysUTC(s, t.duration - 1));
+      }
+      save();
+    };
+    tdDur.appendChild(inDur); tr.appendChild(tdDur);
 
     // depends
     const tdDep = document.createElement("td");
@@ -301,11 +360,11 @@ function render(){
     const tdPr = document.createElement("td");
     const selPr = document.createElement("select");
     [["Высокий","🔥 Высокий"],["Средний","⚠️ Средний"],["Низкий","✅ Низкий"]].forEach(([val,lab])=>{
-      const o = document.createElement("option"); o.value = val; o.textContent = lab;
+      const o = document.createElement("option"); o.value=val; o.textContent=lab;
       if(t.priority === val) o.selected = true;
       selPr.appendChild(o);
     });
-    selPr.onchange = ()=>{ t.priority = selPr.value; save(); };
+    selPr.onchange = ()=> { t.priority = selPr.value; save(); };
     tdPr.appendChild(selPr); tr.appendChild(tdPr);
 
     // owner
@@ -327,71 +386,77 @@ function render(){
 
     // actions
     const tdAct = document.createElement("td"); tdAct.className="center";
-    const btnUp = document.createElement("button"); btnUp.className="ghost"; btnUp.style.padding="6px 8px"; btnUp.textContent="↑"; btnUp.title="Переместить вверх";
+    const btnUp = document.createElement("button"); btnUp.className="ghost"; btnUp.style.padding="6px 8px"; btnUp.textContent="↑";
     btnUp.onclick = ()=>{ moveTask(t.id, -1); };
-    const btnDown = document.createElement("button"); btnDown.className="ghost"; btnDown.style.padding="6px 8px"; btnDown.textContent="↓"; btnDown.title="Переместить вниз";
+    const btnDown = document.createElement("button"); btnDown.className="ghost"; btnDown.style.padding="6px 8px"; btnDown.textContent="↓";
     btnDown.onclick = ()=>{ moveTask(t.id, 1); };
-    const btnDel = document.createElement("button"); btnDel.style.marginLeft="6px"; btnDel.textContent="Удалить"; btnDel.onclick = ()=>{ if(confirm('Удалить задачу '+t.id+'?')){ removeTask(t.id); } };
+    const btnDel = document.createElement("button"); btnDel.style.marginLeft="6px"; btnDel.textContent="Удалить";
+    btnDel.onclick = ()=>{ if(confirm('Удалить задачу '+t.id+'?')){ removeTask(t.id); } };
     tdAct.appendChild(btnUp); tdAct.appendChild(btnDown); tdAct.appendChild(btnDel);
     tr.appendChild(tdAct);
 
     tbody.appendChild(tr);
   }
 
-  document.getElementById("projectTitle").value = document.getElementById("projectTitle").value || "Название проекта";
+  // project title persist
+  const storedTitle = localStorage.getItem("project.title");
+  if(storedTitle) document.getElementById("projectTitle").value = storedTitle;
   drawGantt();
 }
 
-/* ========= CRUD helpers ========= */
-function genId(){
-  // A1, A2, ...
-  let n = 1;
-  while(tasks.some(t => t.id === `A${n}`)) n++;
-  return `A${n}`;
-}
+/* CRUD helpers */
+function genId(){ let n=1; while(tasks.some(t=> t.id === `A${n}`)) n++; return `A${n}`; }
 function addTask(){
-  const name = document.getElementById("taskName").value.trim() || `Новая задача ${tasks.length+1}`;
+  const name = document.getElementById("taskName").value.trim();
+  if(!name){ alert("Название задачи нельзя пустым"); return; }
   const start = document.getElementById("taskStart").value || "";
   const end = document.getElementById("taskEnd").value || "";
+  const dur = Number(document.getElementById("taskDuration").value) || DEFAULT_DAYS;
   const depends = document.getElementById("taskDepends").value.trim() || "";
   const priority = document.getElementById("taskPriority").value;
   const owner = document.getElementById("taskOwner").value.trim() || "";
   const status = document.getElementById("taskStatus").value;
-  const obj = { id: genId(), name, start, end, depends, override: false, priority, owner, status };
+  const obj = { id: genId(), name, start, end, duration: Math.max(1,dur), depends, override:false, priority, owner, status };
+  // if start exists and no end -> compute end from duration
+  if(obj.start && !obj.end){
+    const s = parseYMD(obj.start);
+    if(s) obj.end = fmtYMD(addDaysUTC(s, obj.duration - 1));
+  }
+  // if end exists and no start -> compute start from duration
+  if(obj.end && !obj.start){
+    const e = parseYMD(obj.end);
+    if(e) obj.start = fmtYMD(addDaysUTC(e, - (obj.duration - 1)));
+  }
   tasks.push(obj);
-  // clear fields
+  // clear inputs
   document.getElementById("taskName").value = "";
   document.getElementById("taskStart").value = "";
   document.getElementById("taskEnd").value = "";
+  document.getElementById("taskDuration").value = "";
   document.getElementById("taskDepends").value = "";
   document.getElementById("taskOwner").value = "";
   save();
 }
 function removeTask(id){
   tasks = tasks.filter(t=> t.id !== id);
-  // also clear depends that reference it
-  tasks.forEach(t=>{ if(t.depends === id) t.depends = ""; });
+  tasks.forEach(t=> { if(t.depends === id) t.depends = ""; });
   save();
 }
 function moveTask(id, dir){
-  const idx = tasks.findIndex(t => t.id === id);
+  const idx = tasks.findIndex(t=> t.id === id);
   if(idx < 0) return;
   const to = idx + dir;
   if(to < 0 || to >= tasks.length) return;
   const tmp = tasks[to]; tasks[to] = tasks[idx]; tasks[idx] = tmp;
   save();
 }
-function clearAll(){
-  if(confirm("Удалить все задачи?")){ tasks = []; save(); }
-}
+function clearAll(){ if(confirm("Удалить все задачи?")){ tasks = []; save(); } }
 
-/* ========= CSV export/import (simple) ========= */
+/* CSV export/import */
 function downloadCSV(){
-  const header = ["ID","Name","Start","End","Depends","Override","Priority","Owner","Status"];
-  const rows = tasks.map(t => [
-    t.id, `"${(t.name||"").replace(/"/g,'""')}"`, t.start||"", t.end||"", `"${(t.depends||"").replace(/"/g,'""')}"`, t.override? "1":"0", t.priority||"", t.owner||"", t.status||""
-  ]);
-  const txt = [header.join(","), ...rows.map(r=> r.join(","))].join("\n");
+  const hdr = ["ID","Name","Start","End","Duration","Depends","Override","Priority","Owner","Status"];
+  const rows = tasks.map(t => [t.id, `"${(t.name||"").replace(/"/g,'""')}"`, t.start||"", t.end||"", String(t.duration||""), `"${(t.depends||"").replace(/"/g,'""')}"`, t.override? "1":"0", t.priority||"", t.owner||"", t.status||""]);
+  const txt = [hdr.join(","), ...rows.map(r=>r.join(","))].join("\n");
   const blob = new Blob([txt], {type:"text/csv;charset=utf-8"});
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a"); a.href = url; a.download = "tasks.csv"; a.click(); URL.revokeObjectURL(url);
@@ -400,37 +465,29 @@ function importCSVPrompt(){
   const inp = document.createElement("input"); inp.type="file"; inp.accept=".csv";
   inp.onchange = e=>{
     const f = e.target.files[0]; if(!f) return;
-    const r = new FileReader();
-    r.onload = ev => {
-      try{
-        parseCSV(ev.target.result);
-        save();
-      }catch(err){
-        alert("Ошибка при импорте: " + err);
-      }
-    };
-    r.readAsText(f,"utf-8");
+    const reader = new FileReader();
+    reader.onload = ev => { try{ parseCSV(ev.target.result); save(); } catch(err){ alert("Ошибка импорта: "+err); } };
+    reader.readAsText(f,"utf-8");
   };
   inp.click();
 }
 function parseCSV(text){
   const lines = text.split(/\r?\n/).filter(Boolean);
   if(lines.length < 2) throw "CSV пуст или некорректен";
-  const hdr = lines[0].split(",").map(h=>h.trim());
   const newTasks = [];
   for(let i=1;i<lines.length;i++){
     const cols = csvSplit(lines[i]);
-    if(cols.length < 5) continue;
     const t = {
       id: cols[0] || genId(),
       name: cols[1] ? cols[1].replace(/^"|"$/g,"").replace(/""/g,'"') : "",
       start: cols[2] || "",
       end: cols[3] || "",
-      depends: cols[4] ? cols[4].replace(/^"|"$/g,"").replace(/""/g,'"') : "",
-      override: (cols[5]||"") === "1",
-      priority: cols[6] || "Средний",
-      owner: cols[7] || "",
-      status: cols[8] || "Не начато"
+      duration: Number(cols[4]) || DEFAULT_DAYS,
+      depends: cols[5] ? cols[5].replace(/^"|"$/g,"").replace(/""/g,'"') : "",
+      override: (cols[6]||"") === "1",
+      priority: cols[7] || "Средний",
+      owner: cols[8] || "",
+      status: cols[9] || "Не начато"
     };
     newTasks.push(t);
   }
@@ -439,143 +496,120 @@ function parseCSV(text){
 function csvSplit(line){
   const out=[]; let cur=""; let q=false;
   for(let i=0;i<line.length;i++){
-    const ch=line[i];
+    const ch = line[i];
     if(ch === '"'){ if(q && line[i+1]==='"'){ cur+='"'; i++; } else q=!q; continue; }
     if(ch === ',' && !q){ out.push(cur); cur=""; continue; }
-    cur+=ch;
+    cur += ch;
   }
   out.push(cur);
   return out;
 }
 
-/* ========= GANTT drawing ========= */
+/* =========================
+   GANTT drawing (UTC-safe)
+   ========================= */
 function drawGantt(){
-  resolveDependencies(); // ensure dates are up-to-date
+  resolveDependencies();
   const canvas = document.getElementById("ganttCanvas");
   const ctx = canvas.getContext("2d");
-  // adapt canvas pixel size to container width
   const containerWidth = canvas.clientWidth;
-  canvas.width = Math.max(600, Math.floor(containerWidth));
-  // size
-  const width = canvas.width, height = canvas.height = 360;
+  canvas.width = Math.max(700, Math.floor(containerWidth));
+  const width = canvas.width, height = canvas.height = 420;
   ctx.clearRect(0,0,width,height);
-  // collect date range
-  const validTasks = tasks.filter(t=> parse(t.start) !== null && parse(t.end) !== null);
-  if(validTasks.length === 0){
-    ctx.fillStyle = "#666"; ctx.font = "14px Arial"; ctx.fillText("Нет задач с заполненными датами для показа Ганта", 20, 24); return;
-  }
-  let minDate = parse(validTasks[0].start), maxDate = parse(validTasks[0].end);
-  validTasks.forEach(t=>{
-    const s = parse(t.start), e = parse(t.end);
-    if(!s || !e) return;
-    if(s < minDate) minDate = s;
-    if(e > maxDate) maxDate = e;
-  });
-  // pad range by 1 day each side
-  minDate = addDays(minDate, -1);
-  maxDate = addDays(maxDate, 1);
-  const totalDays = daysBetween(minDate, maxDate) + 1;
-  const leftPadding = 140;
-  const rightPadding = 30;
-  const usableWidth = width - leftPadding - rightPadding;
-  const pxPerDay = Math.max(8, usableWidth / Math.max(1,totalDays)); // min width per day
 
-  // draw grid header (dates)
-  ctx.font = "12px Arial";
-  ctx.fillStyle = "#111";
-  // top header background
+  const valid = tasks.filter(t => parseYMD(t.start) && parseYMD(t.end));
+  if(valid.length === 0){
+    ctx.fillStyle = "#666"; ctx.font = "14px Arial"; ctx.fillText("Нет задач с корректными датами для Ганта", 20, 24); return;
+  }
+
+  // compute min/max
+  let min = parseYMD(valid[0].start), max = parseYMD(valid[0].end);
+  valid.forEach(t => {
+    const s = parseYMD(t.start), e = parseYMD(t.end);
+    if(s && s < min) min = s;
+    if(e && e > max) max = e;
+  });
+  min = addDaysUTC(min, -1); max = addDaysUTC(max, 1);
+  const totalDays = daysBetweenUTC(min, max) + 1;
+
+  const leftPad = 150, rightPad = 30;
+  const usable = width - leftPad - rightPad;
+  const pxPerDay = Math.max(6, usable / Math.max(1, totalDays));
+
+  // header background
   ctx.fillStyle = "#fafbff";
-  ctx.fillRect(leftPadding, 0, usableWidth, 28);
-  ctx.fillStyle = "#666";
+  ctx.fillRect(leftPad, 0, usable, 28);
+  ctx.font = "12px Arial";
   for(let d=0; d<= totalDays; d++){
-    const cur = addDays(minDate, d);
-    const x = leftPadding + Math.round(d * pxPerDay);
-    // vertical grid line
-    ctx.strokeStyle = "#f0f2f7";
-    ctx.beginPath(); ctx.moveTo(x + 0.5, 28); ctx.lineTo(x + 0.5, height - 10); ctx.stroke();
-    // date label every ~2-3 days depending on zoom
+    const cur = addDaysUTC(min, d);
+    const x = leftPad + Math.round(d * pxPerDay);
+    ctx.strokeStyle = "#f0f2f7"; ctx.beginPath(); ctx.moveTo(x+0.5, 28); ctx.lineTo(x+0.5, height - 16); ctx.stroke();
     if(pxPerDay > 14 || d % Math.max(1, Math.ceil(3 / (pxPerDay/8))) === 0){
-      ctx.fillStyle = "#333";
-      ctx.fillText(cur.toISOString().slice(0,10), x + 2, 18);
+      ctx.fillStyle = "#333"; ctx.fillText(cur.toISOString().slice(0,10), x+2, 18);
     }
   }
 
-  // draw rows and bars
-  const rowHeight = 36;
-  validTasks.forEach((t, idx)=>{
-    const y = 36 + idx * rowHeight;
-    // label area
-    ctx.fillStyle = "#111";
-    ctx.font = "13px Arial";
-    ctx.fillText(`${t.id} ${t.name}`, 8, y + 14);
+  const rowH = 36;
+  valid.forEach((t, idx) => {
+    const y = 36 + idx * rowH;
+    ctx.fillStyle = "#111"; ctx.font = "13px Arial"; ctx.fillText(`${t.id} ${t.name}`, 8, y + 14);
+    ctx.fillStyle = idx % 2 === 0 ? "#fff" : "#fbfcff"; ctx.fillRect(leftPad, y, usable, rowH - 6);
 
-    // draw background row
-    ctx.fillStyle = idx % 2 === 0 ? "#ffffff" : "#fbfcff";
-    ctx.fillRect(leftPadding, y, usableWidth, rowHeight - 6);
-
-    // compute positions
-    const s = parse(t.start), e = parse(t.end);
+    const s = parseYMD(t.start), e = parseYMD(t.end);
     if(!s || !e) return;
-    const startOffset = daysBetween(minDate, s);
-    const dur = daysBetween(s, e) + 1;
-    const x = leftPadding + Math.round(startOffset * pxPerDay);
+    const offset = daysBetweenUTC(min, s);
+    const dur = daysBetweenUTC(s, e) + 1;
+    const x = leftPad + Math.round(offset * pxPerDay);
     const w = Math.max(6, Math.round(dur * pxPerDay));
 
-    // color by status / priority
     let color = "#4666ff";
     if(t.status === "Готово") color = "#2db47e";
     if(t.status === "Заблокировано") color = "#ff6b6b";
-    // draw bar
+
+    // rounded bar
     ctx.fillStyle = color;
     roundRect(ctx, x+2, y+6, w-4, 22, 6, true, false);
-    // label inside bar (if wide)
-    ctx.fillStyle = "#fff";
-    ctx.font = "12px Arial";
-    if(w > 60){
+
+    ctx.fillStyle = "#fff"; ctx.font = "12px Arial";
+    if(w > 80){
       ctx.fillText(t.name, x + 10, y + 20);
     } else {
-      // small, draw name left
-      ctx.fillStyle = "#333";
-      ctx.fillText(t.name, x + w + 6, y + 18);
+      ctx.fillStyle = "#333"; ctx.fillText(t.name, x + w + 6, y + 18);
     }
+    // draw start & end small
+    ctx.fillStyle = "#666"; ctx.font = "11px Arial";
+    ctx.fillText(fmtYMD(s), x, y + 36);
+    ctx.fillText(fmtYMD(e), x + Math.max(6, w - 60), y + 36);
   });
 
-  // helper draw border
-  ctx.strokeStyle = "#e9eefb";
-  ctx.strokeRect(leftPadding, 28, usableWidth, validTasks.length * rowHeight);
+  ctx.strokeStyle = "#e9eefb"; ctx.strokeRect(leftPad, 28, usable, valid.length * rowH);
 
-  // small utility for rounded rect
-  function roundRect(ctx, x, y, w, h, r, fill, stroke){
-    if(w < 2 * r) r = w / 2;
-    if(h < 2 * r) r = h / 2;
+  function roundRect(ctx,x,y,w,h,r,fill,stroke){
+    if(w < 2*r) r = w/2; if(h < 2*r) r = h/2;
     ctx.beginPath();
-    ctx.moveTo(x+r, y);
-    ctx.arcTo(x+w, y,   x+w, y+h, r);
-    ctx.arcTo(x+w, y+h, x,   y+h, r);
-    ctx.arcTo(x,   y+h, x,   y,   r);
-    ctx.arcTo(x,   y,   x+w, y,   r);
-    ctx.closePath();
-    if(fill){ ctx.fill(); }
-    if(stroke){ ctx.stroke(); }
+    ctx.moveTo(x+r,y); ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r); ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath();
+    if(fill) ctx.fill(); if(stroke) ctx.stroke();
   }
 }
 
-/* ========== init ========== */
+/* =========================
+   Init and bindings
+   ========================= */
 document.getElementById("projectTitle").addEventListener("change", () => {
   localStorage.setItem("project.title", document.getElementById("projectTitle").value);
 });
-function loadTitle(){
+
+function boot(){
   const t = localStorage.getItem("project.title");
   if(t) document.getElementById("projectTitle").value = t;
+  load();
+  render();
+  window.addEventListener("resize", () => { drawGantt(); });
+  // expose for debugging
+  window.tracker = { tasks, save, load, render, drawGantt, resolveDependencies };
 }
+boot();
 
-/* boot */
-loadTitle();
-load();
-render();
-
-/* expose for debug */
-window.tracker = { tasks, save, load, render, drawGantt };
 </script>
 </body>
 </html>
