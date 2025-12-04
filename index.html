@@ -1,163 +1,581 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-<meta charset="UTF-8" />
-<title>Трекер проекта</title>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Project Tracker — Гант</title>
 <style>
-    body {
-        font-family: Arial, sans-serif;
-        background: #fafafa;
-        padding: 30px;
-        max-width: 900px;
-        margin: auto;
-    }
-    h1 {
-        font-size: 28px;
-        margin-bottom: 20px;
-        text-align: center;
-    }
-    table {
-        width: 100%;
-        border-collapse: collapse;
-        margin-bottom: 40px;
-        background: white;
-        border-radius: 10px;
-        overflow: hidden;
-    }
-    th, td {
-        border: 1px solid #ddd;
-        padding: 10px;
-        font-size: 14px;
-        text-align: left;
-    }
-    th {
-        background: #f3f3f3;
-        font-weight: bold;
-    }
-    input, select {
-        width: 100%;
-        padding: 6px;
-        box-sizing: border-box;
-        font-size: 14px;
-    }
-    .gantt {
-        border: 1px solid #ddd;
-        padding: 20px;
-        background: white;
-        border-radius: 10px;
-    }
+  :root{
+    --bg:#f5f7fb;
+    --card:#fff;
+    --muted:#6b6f76;
+    --accent:#4666ff;
+    --success:#24b47e;
+    --danger:#ff6b6b;
+    --shadow: 0 6px 18px rgba(42,52,90,0.06);
+  }
+  *{box-sizing:border-box}
+  body{
+    background:var(--bg);
+    font-family: Inter, Roboto, Arial, sans-serif;
+    color:#222;
+    margin:0;
+    padding:28px;
+    display:flex;
+    justify-content:center;
+  }
+  .wrap{width:100%;max-width:1100px}
+  header{
+    display:flex;
+    gap:12px;
+    align-items:center;
+    margin-bottom:18px;
+  }
+  header h1{margin:0;font-size:20px}
+  header input[type="text"]{
+    font-size:18px;padding:8px 10px;border-radius:8px;border:1px solid #e1e6f0;background:white;width:100%;
+  }
+  .topbar{display:flex;gap:10px;margin-bottom:12px;align-items:center}
+  .card{background:var(--card);border-radius:12px;padding:12px;border:1px solid #eef2fb;box-shadow:var(--shadow);margin-bottom:14px}
+  .controls{display:flex;gap:8px;flex-wrap:wrap}
+  button{background:var(--accent);color:white;border:none;padding:8px 10px;border-radius:8px;cursor:pointer;font-weight:600}
+  button.ghost{background:transparent;color:var(--accent);border:1px solid rgba(70,102,255,0.12)}
+  button.warn{background:var(--danger)}
+  .grid{display:grid;grid-template-columns:1fr 380px;gap:12px}
+  @media (max-width:1000px){ .grid{grid-template-columns:1fr} }
+
+  table{width:100%;border-collapse:collapse;font-size:14px}
+  th,td{padding:8px;border-bottom:1px solid #f0f3fa;vertical-align:middle}
+  th{background:#fbfcff;color:var(--muted);font-weight:700;text-align:left}
+  .id{width:64px;color:#445; font-weight:700}
+  input[type="date"], input[type="text"], select{padding:6px;border-radius:8px;border:1px solid #e6ebf8;background:white}
+  .small{font-size:12px;color:var(--muted)}
+  .center{text-align:center}
+  .nowrap{white-space:nowrap}
+  .priority-chip{display:inline-flex;gap:6px;align-items:center;padding:6px 8px;border-radius:999px;font-weight:600}
+  .prio-high{background:#ffe8e8;color:#c33;border:1px solid rgba(255,107,107,0.12)}
+  .prio-mid{background:#fff4e6;color:#c76b11;border:1px solid rgba(255,170,0,0.08)}
+  .prio-low{background:#e9f9f0;color:#0a7a4a;border:1px solid rgba(36,180,126,0.08)}
+
+  /* Gantt */
+  .gantt-wrap{overflow:auto;padding:8px}
+  .gantt-canvas{background:white;border-radius:10px;border:1px solid #eef2fb;padding:10px}
+  .legend{display:flex;gap:8px;align-items:center;margin-top:8px}
+  .legend .item{display:flex;gap:6px;align-items:center;font-size:13px;color:var(--muted)}
+  .bar-rect{width:18px;height:10px;border-radius:4px;display:inline-block}
+
+  .actions{display:flex;gap:8px;align-items:center;margin-left:auto}
+  .muted{color:var(--muted)}
 </style>
 </head>
-
 <body>
+  <div class="wrap">
+    <header style="margin-bottom:8px">
+      <input id="projectTitle" type="text" value="Название проекта" />
+    </header>
 
-<h1 id="projectTitle">Название проекта</h1>
+    <div class="card topbar" style="align-items:flex-start">
+      <div style="flex:1">
+        <div style="display:flex;gap:8px;align-items:center">
+          <input id="taskName" type="text" placeholder="Новая задача — название" style="flex:1"/>
+          <input id="taskStart" type="date" />
+          <input id="taskEnd" type="date" />
+          <input id="taskDepends" type="text" placeholder="Depends (ID или имя)" style="width:130px"/>
+          <select id="taskPriority">
+            <option value="Высокий">🔥 Высокий</option>
+            <option value="Средний" selected>⚠️ Средний</option>
+            <option value="Низкий">✅ Низкий</option>
+          </select>
+          <input id="taskOwner" type="text" placeholder="Ответственный" style="width:120px"/>
+          <select id="taskStatus">
+            <option>Не начато</option><option>В работе</option><option>Ожидание</option><option>Готово</option>
+          </select>
+          <button onclick="addTask()">Добавить</button>
+        </div>
+        <div class="small" style="margin-top:8px">Зависимость: указывай <strong>ID</strong> (A1, A2...) или точное имя предшественника. Если задача зависит — её <em>Start</em> будет равен <em>End</em> предшественника.</div>
+      </div>
 
-<table id="taskTable">
-    <tr>
-        <th>Задача</th>
-        <th>Старт</th>
-        <th>Зависит от</th>
-        <th>Приоритет</th>
-        <th>Ответственный</th>
-        <th>Статус</th>
-    </tr>
-</table>
+      <div class="actions">
+        <button class="ghost" onclick="downloadCSV()">Экспорт CSV</button>
+        <button class="ghost" onclick="importCSVPrompt()">Импорт CSV</button>
+        <button class="ghost" onclick="clearAll()">Очистить</button>
+      </div>
+    </div>
 
-<div class="gantt">
-    <h3>Диаграмма Ганта</h3>
-    <canvas id="ganttChart" width="800" height="300"></canvas>
-</div>
+    <div class="grid">
+      <!-- left: table -->
+      <div class="card">
+        <table id="tasksTable" role="grid">
+          <thead>
+            <tr>
+              <th class="id">ID</th>
+              <th>Задача</th>
+              <th>Start</th>
+              <th>End</th>
+              <th>Depends</th>
+              <th>Override</th>
+              <th>Приоритет</th>
+              <th>Ответственный</th>
+              <th>Статус</th>
+              <th class="center">Действия</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+        <div style="margin-top:8px" class="small muted">Автосохранение: LocalStorage. После редактирования — данные применяются мгновенно и рефрешат диаграмму.</div>
+      </div>
+
+      <!-- right: gantt -->
+      <div>
+        <div class="card">
+          <div style="display:flex;align-items:center;justify-content:space-between">
+            <div><strong>Диаграмма Ганта</strong></div>
+            <div class="small muted">Масштаб по дням. Обновляется автоматически.</div>
+          </div>
+          <div class="gantt-wrap" style="margin-top:10px">
+            <div class="gantt-canvas">
+              <canvas id="ganttCanvas" width="820" height="360" style="width:100%;height:360px;display:block"></canvas>
+            </div>
+            <div class="legend">
+              <div class="item"><span class="bar-rect" style="background:#4666ff"></span> Задача</div>
+              <div class="item"><span class="bar-rect" style="background:#2db47e"></span> Готово</div>
+              <div class="item"><span class="bar-rect" style="background:#ff6b6b"></span> Заблокировано</div>
+            </div>
+          </div>
+        </div>
+
+        <div style="height:12px"></div>
+        <div class="card small muted">Совет: используй ID A1, A2... — при добавлении они генерируются автоматически.</div>
+      </div>
+    </div>
+  </div>
 
 <script>
-let tasks = [
-    { name: "Задача 1", start: "2025-01-10", depends: "", priority: "Высокий", owner: "Алиса", status: "В работе" },
-    { name: "Задача 2", start: "2025-01-12", depends: "Задача 1", priority: "Средний", owner: "Саша", status: "Не начато" },
-    { name: "Задача 3", start: "2025-01-15", depends: "Задача 2", priority: "Низкий", owner: "Оля", status: "Не начато" }
-];
+/* ======== Data model and storage ======== */
+const STORAGE_KEY = "project.tracker.v2";
+let tasks = []; // {id, name, start, end, depends, override (bool), priority, owner, status}
+const defaultDurationDays = 3; // used when end missing: end = start + (defaultDurationDays - 1)
 
-function renderTable() {
-    let table = document.getElementById("taskTable");
-    table.innerHTML = `
-        <tr>
-            <th>Задача</th>
-            <th>Старт</th>
-            <th>Зависит от</th>
-            <th>Приоритет</th>
-            <th>Ответственный</th>
-            <th>Статус</th>
-        </tr>
-    `;
+/* utils */
+const fmt = d => d ? new Date(d).toISOString().slice(0,10) : "";
+const parse = s => {
+  if(!s) return null;
+  const t = new Date(s + "T00:00:00");
+  return isNaN(t) ? null : t;
+};
+const addDays = (d, n) => { const x = new Date(d); x.setDate(x.getDate() + n); return x; };
+const daysBetween = (a,b) => Math.round((b - a) / (24*3600*1000));
 
-    tasks.forEach((t, i) => {
-        let row = document.createElement("tr");
-
-        row.innerHTML = `
-            <td><input value="${t.name}" onchange="update(${i}, 'name', this.value)" /></td>
-            <td><input type="date" value="${t.start}" onchange="update(${i}, 'start', this.value)" /></td>
-            <td><input value="${t.depends}" onchange="update(${i}, 'depends', this.value)" /></td>
-            <td>
-                <select onchange="update(${i}, 'priority', this.value)">
-                    <option ${t.priority==="Высокий"?"selected":""}>Высокий</option>
-                    <option ${t.priority==="Средний"?"selected":""}>Средний</option>
-                    <option ${t.priority==="Низкий"?"selected":""}>Низкий</option>
-                </select>
-            </td>
-            <td><input value="${t.owner}" onchange="update(${i}, 'owner', this.value)" /></td>
-            <td>
-                <select onchange="update(${i}, 'status', this.value)">
-                    <option ${t.status==="Не начато"?"selected":""}>Не начато</option>
-                    <option ${t.status==="В работе"?"selected":""}>В работе</option>
-                    <option ${t.status==="Готово"?"selected":""}>Готово</option>
-                </select>
-            </td>
-        `;
-
-        table.appendChild(row);
-    });
+function save(){
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks));
+  render();
+}
+function load(){
+  const raw = localStorage.getItem(STORAGE_KEY);
+  if(raw){
+    try{ tasks = JSON.parse(raw) } catch(e){ tasks = []; }
+  } else {
+    // sample initial
+    tasks = [
+      {id:"A1", name:"Обмер", start:fmt(new Date()), end:fmt(addDays(new Date(),2)), depends:"", override:false, priority:"Высокий", owner:"Алиса", status:"В работе"},
+      {id:"A2", name:"Планировки", start:"", end:"", depends:"A1", override:false, priority:"Средний", owner:"Саша", status:"Не начато"},
+      {id:"A3", name:"Визуализации", start:"", end:"", depends:"A2", override:false, priority:"Низкий", owner:"Оля", status:"Не начато"}
+    ];
+    save();
+  }
 }
 
-function autoCalculate() {
-    let map = {};
-    tasks.forEach(t => map[t.name] = t);
+/* ========= Core: dependency resolution =========
+ Rules:
+  - If task.depends references a task (by id or exact name) and override==false:
+      task.start := predecessor.end (same day)
+  - If task.start exists and task.end missing -> end = start + (defaultDurationDays-1)
+  - If end < start -> end = start
+  - Repeat iteratively until stable (max passes = tasks.length+5)
+*/
+function resolveDependencies(){
+  const map = {};
+  tasks.forEach(t => map[t.id] = t);
+  // also allow lookup by name
+  tasks.forEach(t => map[t.name] = t);
 
-    tasks.forEach(t => {
-        if (t.depends && map[t.depends]) {
-            let base = new Date(map[t.depends].start);
-            base.setDate(base.getDate() + 3); // +3 дня длительность условная
-            t.start = base.toISOString().split("T")[0];
+  // initialize dates as Date objects for computation
+  tasks.forEach(t => {
+    t._start = parse(t.start);
+    t._end = parse(t.end);
+  });
+
+  let changed = true;
+  let passes = 0;
+  const maxPasses = tasks.length + 5;
+
+  while(changed && passes < maxPasses){
+    changed = false;
+    passes++;
+    for(const t of tasks){
+      // if depends and predecessor exists and not override -> set start = pred.end
+      if(t.depends && !t.override){
+        const pred = map[t.depends];
+        if(pred && parse(pred.end)){
+          const predEndDate = parse(pred.end);
+          // rule: dependent start = pred.end (same day)
+          const desiredStart = fmt(predEndDate);
+          if(t.start !== desiredStart){
+            t.start = desiredStart;
+            t._start = parse(t.start);
+            changed = true;
+          }
+          // if no end or end < start -> set end = start + defaultDuration-1
+          if(!t.end || parse(t.end) < t._start){
+            const newEnd = fmt(addDays(t._start, defaultDurationDays - 1));
+            if(t.end !== newEnd){
+              t.end = newEnd; t._end = parse(t.end); changed = true;
+            }
+          }
         }
+      } else {
+        // no depends or override: if start exists and end missing -> create end
+        if(t.start && (!t.end || parse(t.end) < parse(t.start))){
+          const s = parse(t.start);
+          if(s){
+            const newEnd = fmt(addDays(s, defaultDurationDays - 1));
+            if(t.end !== newEnd){
+              t.end = newEnd; t._end = parse(t.end); changed = true;
+            }
+          }
+        }
+      }
+    }
+  }
+
+  // final normalization: ensure strings are formatted
+  tasks.forEach(t=>{
+    t.start = fmt(parse(t.start)) || "";
+    t.end = fmt(parse(t.end)) || "";
+  });
+}
+
+/* ========= UI Rendering ========= */
+function render(){
+  resolveDependencies();
+  const tbody = document.querySelector("#tasksTable tbody");
+  tbody.innerHTML = "";
+  for(const t of tasks){
+    const tr = document.createElement("tr");
+
+    // id
+    const tdId = document.createElement("td"); tdId.className="id"; tdId.textContent = t.id; tr.appendChild(tdId);
+
+    // name
+    const tdName = document.createElement("td");
+    const inpName = document.createElement("input"); inpName.type="text"; inpName.value = t.name;
+    inpName.onchange = () => { t.name = inpName.value.trim(); save(); };
+    tdName.appendChild(inpName); tr.appendChild(tdName);
+
+    // start
+    const tdStart = document.createElement("td");
+    const inStart = document.createElement("input"); inStart.type="date"; inStart.value = t.start || "";
+    inStart.onchange = () => { t.start = inStart.value || ""; save(); };
+    tdStart.appendChild(inStart); tr.appendChild(tdStart);
+
+    // end
+    const tdEnd = document.createElement("td");
+    const inEnd = document.createElement("input"); inEnd.type="date"; inEnd.value = t.end || "";
+    inEnd.onchange = () => { t.end = inEnd.value || ""; save(); };
+    tdEnd.appendChild(inEnd); tr.appendChild(tdEnd);
+
+    // depends
+    const tdDep = document.createElement("td");
+    const inDep = document.createElement("input"); inDep.type="text"; inDep.value = t.depends || "";
+    inDep.placeholder = "A1 или точное имя";
+    inDep.onchange = () => { t.depends = inDep.value.trim(); save(); };
+    tdDep.appendChild(inDep); tr.appendChild(tdDep);
+
+    // override
+    const tdOv = document.createElement("td"); tdOv.className="center";
+    const chk = document.createElement("input"); chk.type="checkbox"; chk.checked = !!t.override;
+    chk.onchange = () => { t.override = chk.checked; save(); };
+    tdOv.appendChild(chk); tr.appendChild(tdOv);
+
+    // priority
+    const tdPr = document.createElement("td");
+    const selPr = document.createElement("select");
+    [["Высокий","🔥 Высокий"],["Средний","⚠️ Средний"],["Низкий","✅ Низкий"]].forEach(([val,lab])=>{
+      const o = document.createElement("option"); o.value = val; o.textContent = lab;
+      if(t.priority === val) o.selected = true;
+      selPr.appendChild(o);
     });
-}
+    selPr.onchange = ()=>{ t.priority = selPr.value; save(); };
+    tdPr.appendChild(selPr); tr.appendChild(tdPr);
 
-function update(index, field, value) {
-    tasks[index][field] = value;
-    autoCalculate();
-    renderTable();
-    drawGantt();
-}
+    // owner
+    const tdOwn = document.createElement("td");
+    const inOwn = document.createElement("input"); inOwn.type="text"; inOwn.value = t.owner || "";
+    inOwn.onchange = ()=>{ t.owner = inOwn.value; save(); };
+    tdOwn.appendChild(inOwn); tr.appendChild(tdOwn);
 
-function drawGantt() {
-    let c = document.getElementById("ganttChart");
-    let ctx = c.getContext("2d");
-
-    ctx.clearRect(0, 0, c.width, c.height);
-
-    tasks.forEach((t, i) => {
-        let x = new Date(t.start).getTime() / 10000000;
-        let y = i * 50 + 20;
-
-        ctx.fillStyle = "#4466ff";
-        ctx.fillRect(x, y, 120, 20);
-
-        ctx.fillStyle = "#000";
-        ctx.fillText(t.name, 10, y + 15);
+    // status
+    const tdSt = document.createElement("td");
+    const selSt = document.createElement("select");
+    ["Не начато","В работе","Ожидание","Готово","Заблокировано"].forEach(s=>{
+      const o = document.createElement("option"); o.value = s; o.textContent = s;
+      if(t.status === s) o.selected = true;
+      selSt.appendChild(o);
     });
+    selSt.onchange = ()=>{ t.status = selSt.value; save(); };
+    tdSt.appendChild(selSt); tr.appendChild(tdSt);
+
+    // actions
+    const tdAct = document.createElement("td"); tdAct.className="center";
+    const btnUp = document.createElement("button"); btnUp.className="ghost"; btnUp.style.padding="6px 8px"; btnUp.textContent="↑"; btnUp.title="Переместить вверх";
+    btnUp.onclick = ()=>{ moveTask(t.id, -1); };
+    const btnDown = document.createElement("button"); btnDown.className="ghost"; btnDown.style.padding="6px 8px"; btnDown.textContent="↓"; btnDown.title="Переместить вниз";
+    btnDown.onclick = ()=>{ moveTask(t.id, 1); };
+    const btnDel = document.createElement("button"); btnDel.style.marginLeft="6px"; btnDel.textContent="Удалить"; btnDel.onclick = ()=>{ if(confirm('Удалить задачу '+t.id+'?')){ removeTask(t.id); } };
+    tdAct.appendChild(btnUp); tdAct.appendChild(btnDown); tdAct.appendChild(btnDel);
+    tr.appendChild(tdAct);
+
+    tbody.appendChild(tr);
+  }
+
+  document.getElementById("projectTitle").value = document.getElementById("projectTitle").value || "Название проекта";
+  drawGantt();
 }
 
-renderTable();
-drawGantt();
+/* ========= CRUD helpers ========= */
+function genId(){
+  // A1, A2, ...
+  let n = 1;
+  while(tasks.some(t => t.id === `A${n}`)) n++;
+  return `A${n}`;
+}
+function addTask(){
+  const name = document.getElementById("taskName").value.trim() || `Новая задача ${tasks.length+1}`;
+  const start = document.getElementById("taskStart").value || "";
+  const end = document.getElementById("taskEnd").value || "";
+  const depends = document.getElementById("taskDepends").value.trim() || "";
+  const priority = document.getElementById("taskPriority").value;
+  const owner = document.getElementById("taskOwner").value.trim() || "";
+  const status = document.getElementById("taskStatus").value;
+  const obj = { id: genId(), name, start, end, depends, override: false, priority, owner, status };
+  tasks.push(obj);
+  // clear fields
+  document.getElementById("taskName").value = "";
+  document.getElementById("taskStart").value = "";
+  document.getElementById("taskEnd").value = "";
+  document.getElementById("taskDepends").value = "";
+  document.getElementById("taskOwner").value = "";
+  save();
+}
+function removeTask(id){
+  tasks = tasks.filter(t=> t.id !== id);
+  // also clear depends that reference it
+  tasks.forEach(t=>{ if(t.depends === id) t.depends = ""; });
+  save();
+}
+function moveTask(id, dir){
+  const idx = tasks.findIndex(t => t.id === id);
+  if(idx < 0) return;
+  const to = idx + dir;
+  if(to < 0 || to >= tasks.length) return;
+  const tmp = tasks[to]; tasks[to] = tasks[idx]; tasks[idx] = tmp;
+  save();
+}
+function clearAll(){
+  if(confirm("Удалить все задачи?")){ tasks = []; save(); }
+}
+
+/* ========= CSV export/import (simple) ========= */
+function downloadCSV(){
+  const header = ["ID","Name","Start","End","Depends","Override","Priority","Owner","Status"];
+  const rows = tasks.map(t => [
+    t.id, `"${(t.name||"").replace(/"/g,'""')}"`, t.start||"", t.end||"", `"${(t.depends||"").replace(/"/g,'""')}"`, t.override? "1":"0", t.priority||"", t.owner||"", t.status||""
+  ]);
+  const txt = [header.join(","), ...rows.map(r=> r.join(","))].join("\n");
+  const blob = new Blob([txt], {type:"text/csv;charset=utf-8"});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a"); a.href = url; a.download = "tasks.csv"; a.click(); URL.revokeObjectURL(url);
+}
+function importCSVPrompt(){
+  const inp = document.createElement("input"); inp.type="file"; inp.accept=".csv";
+  inp.onchange = e=>{
+    const f = e.target.files[0]; if(!f) return;
+    const r = new FileReader();
+    r.onload = ev => {
+      try{
+        parseCSV(ev.target.result);
+        save();
+      }catch(err){
+        alert("Ошибка при импорте: " + err);
+      }
+    };
+    r.readAsText(f,"utf-8");
+  };
+  inp.click();
+}
+function parseCSV(text){
+  const lines = text.split(/\r?\n/).filter(Boolean);
+  if(lines.length < 2) throw "CSV пуст или некорректен";
+  const hdr = lines[0].split(",").map(h=>h.trim());
+  const newTasks = [];
+  for(let i=1;i<lines.length;i++){
+    const cols = csvSplit(lines[i]);
+    if(cols.length < 5) continue;
+    const t = {
+      id: cols[0] || genId(),
+      name: cols[1] ? cols[1].replace(/^"|"$/g,"").replace(/""/g,'"') : "",
+      start: cols[2] || "",
+      end: cols[3] || "",
+      depends: cols[4] ? cols[4].replace(/^"|"$/g,"").replace(/""/g,'"') : "",
+      override: (cols[5]||"") === "1",
+      priority: cols[6] || "Средний",
+      owner: cols[7] || "",
+      status: cols[8] || "Не начато"
+    };
+    newTasks.push(t);
+  }
+  tasks = newTasks;
+}
+function csvSplit(line){
+  const out=[]; let cur=""; let q=false;
+  for(let i=0;i<line.length;i++){
+    const ch=line[i];
+    if(ch === '"'){ if(q && line[i+1]==='"'){ cur+='"'; i++; } else q=!q; continue; }
+    if(ch === ',' && !q){ out.push(cur); cur=""; continue; }
+    cur+=ch;
+  }
+  out.push(cur);
+  return out;
+}
+
+/* ========= GANTT drawing ========= */
+function drawGantt(){
+  resolveDependencies(); // ensure dates are up-to-date
+  const canvas = document.getElementById("ganttCanvas");
+  const ctx = canvas.getContext("2d");
+  // adapt canvas pixel size to container width
+  const containerWidth = canvas.clientWidth;
+  canvas.width = Math.max(600, Math.floor(containerWidth));
+  // size
+  const width = canvas.width, height = canvas.height = 360;
+  ctx.clearRect(0,0,width,height);
+  // collect date range
+  const validTasks = tasks.filter(t=> parse(t.start) !== null && parse(t.end) !== null);
+  if(validTasks.length === 0){
+    ctx.fillStyle = "#666"; ctx.font = "14px Arial"; ctx.fillText("Нет задач с заполненными датами для показа Ганта", 20, 24); return;
+  }
+  let minDate = parse(validTasks[0].start), maxDate = parse(validTasks[0].end);
+  validTasks.forEach(t=>{
+    const s = parse(t.start), e = parse(t.end);
+    if(!s || !e) return;
+    if(s < minDate) minDate = s;
+    if(e > maxDate) maxDate = e;
+  });
+  // pad range by 1 day each side
+  minDate = addDays(minDate, -1);
+  maxDate = addDays(maxDate, 1);
+  const totalDays = daysBetween(minDate, maxDate) + 1;
+  const leftPadding = 140;
+  const rightPadding = 30;
+  const usableWidth = width - leftPadding - rightPadding;
+  const pxPerDay = Math.max(8, usableWidth / Math.max(1,totalDays)); // min width per day
+
+  // draw grid header (dates)
+  ctx.font = "12px Arial";
+  ctx.fillStyle = "#111";
+  // top header background
+  ctx.fillStyle = "#fafbff";
+  ctx.fillRect(leftPadding, 0, usableWidth, 28);
+  ctx.fillStyle = "#666";
+  for(let d=0; d<= totalDays; d++){
+    const cur = addDays(minDate, d);
+    const x = leftPadding + Math.round(d * pxPerDay);
+    // vertical grid line
+    ctx.strokeStyle = "#f0f2f7";
+    ctx.beginPath(); ctx.moveTo(x + 0.5, 28); ctx.lineTo(x + 0.5, height - 10); ctx.stroke();
+    // date label every ~2-3 days depending on zoom
+    if(pxPerDay > 14 || d % Math.max(1, Math.ceil(3 / (pxPerDay/8))) === 0){
+      ctx.fillStyle = "#333";
+      ctx.fillText(cur.toISOString().slice(0,10), x + 2, 18);
+    }
+  }
+
+  // draw rows and bars
+  const rowHeight = 36;
+  validTasks.forEach((t, idx)=>{
+    const y = 36 + idx * rowHeight;
+    // label area
+    ctx.fillStyle = "#111";
+    ctx.font = "13px Arial";
+    ctx.fillText(`${t.id} ${t.name}`, 8, y + 14);
+
+    // draw background row
+    ctx.fillStyle = idx % 2 === 0 ? "#ffffff" : "#fbfcff";
+    ctx.fillRect(leftPadding, y, usableWidth, rowHeight - 6);
+
+    // compute positions
+    const s = parse(t.start), e = parse(t.end);
+    if(!s || !e) return;
+    const startOffset = daysBetween(minDate, s);
+    const dur = daysBetween(s, e) + 1;
+    const x = leftPadding + Math.round(startOffset * pxPerDay);
+    const w = Math.max(6, Math.round(dur * pxPerDay));
+
+    // color by status / priority
+    let color = "#4666ff";
+    if(t.status === "Готово") color = "#2db47e";
+    if(t.status === "Заблокировано") color = "#ff6b6b";
+    // draw bar
+    ctx.fillStyle = color;
+    roundRect(ctx, x+2, y+6, w-4, 22, 6, true, false);
+    // label inside bar (if wide)
+    ctx.fillStyle = "#fff";
+    ctx.font = "12px Arial";
+    if(w > 60){
+      ctx.fillText(t.name, x + 10, y + 20);
+    } else {
+      // small, draw name left
+      ctx.fillStyle = "#333";
+      ctx.fillText(t.name, x + w + 6, y + 18);
+    }
+  });
+
+  // helper draw border
+  ctx.strokeStyle = "#e9eefb";
+  ctx.strokeRect(leftPadding, 28, usableWidth, validTasks.length * rowHeight);
+
+  // small utility for rounded rect
+  function roundRect(ctx, x, y, w, h, r, fill, stroke){
+    if(w < 2 * r) r = w / 2;
+    if(h < 2 * r) r = h / 2;
+    ctx.beginPath();
+    ctx.moveTo(x+r, y);
+    ctx.arcTo(x+w, y,   x+w, y+h, r);
+    ctx.arcTo(x+w, y+h, x,   y+h, r);
+    ctx.arcTo(x,   y+h, x,   y,   r);
+    ctx.arcTo(x,   y,   x+w, y,   r);
+    ctx.closePath();
+    if(fill){ ctx.fill(); }
+    if(stroke){ ctx.stroke(); }
+  }
+}
+
+/* ========== init ========== */
+document.getElementById("projectTitle").addEventListener("change", () => {
+  localStorage.setItem("project.title", document.getElementById("projectTitle").value);
+});
+function loadTitle(){
+  const t = localStorage.getItem("project.title");
+  if(t) document.getElementById("projectTitle").value = t;
+}
+
+/* boot */
+loadTitle();
+load();
+render();
+
+/* expose for debug */
+window.tracker = { tasks, save, load, render, drawGantt };
 </script>
-
 </body>
 </html>
